@@ -84,7 +84,8 @@ int main(void)
     TIM_SetCompare3(TIM2, 0);
     for (size_t i = 0; i < DATA_LEN; i++)
     {
-      data[i] = READ_REG(TIM2->ARR)/2;
+      //data[i] = READ_REG(TIM2->ARR)/2;
+      data[i] = 30;
     }
     DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
     DBG_MSG("data[0]: %d\r\n", data[0]);  
@@ -287,9 +288,21 @@ void print_msg(void)
 void send_pwm(void)
 {
   static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 200)
+  if (Get_Systick_Cnt() - last_tick > 500)
   {
     last_tick = Get_Systick_Cnt();
+
+    // update data 
+    static uint8_t arr = 1;
+    if (arr < READ_REG(TIM2->ARR)) {
+      for (size_t i = 0; i < DATA_LEN; i++) {
+        data[i] = arr;
+      }
+    }
+    else {
+      arr = 1;
+    }
+    arr += 1;
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
     exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length
@@ -299,7 +312,7 @@ void send_pwm(void)
     TIM_SetCounter(TIM2, 0);
     DMA_Cmd(DMA1_Channel1, ENABLE);
 
-    DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt);
+    DBG_MSG("arr:  %d, dma_transfer_cplt: %d\r\n", arr, dma_transfer_cplt);
   }
 }
 
