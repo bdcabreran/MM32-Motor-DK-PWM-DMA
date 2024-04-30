@@ -329,13 +329,21 @@ void pwm_timer_init(void) {
     TIM_OC3Init(TIM2, &TIM_OCInitStructure); // Assuming using channel 3, modify as necessary
 
     // Enable the corresponding preload register
-    TIM_ARRPreloadConfig(TIM2, ENABLE);
     TIM_OC3PreloadConfig(TIM2, TIM_OCPreload_Enable); // Assuming using channel 3, modify as necessary
+    TIM_ARRPreloadConfig(TIM2, ENABLE);
+    TIM_SetCounter(TIM2, 0);
+
+    // Necessary ?
+    //TIM_SelectInputTrigger(TIM2, TIM_TS_ITR0); // Select the input trigger
+    //TIM_SelectMasterSlaveMode(TIM2, TIM_MasterSlaveMode_Disable); // Enable the Master/Slave mode
 
     // Enable TIM Update DMA request
     // TIM_DMAConfig(TIM2, TIM_DMABase_CCR3, TIM_DMABurstLength_1Byte); // Assuming channel 3 for DMA burst
     // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
     TIM_DMACmd(TIM2, TIM_DMA_CC3, ENABLE);
+    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
+
+
 
     // Enable IT
     //TIM_ITConfig(WS2812_TIM, TIM_IT_CC3, ENABLE);
