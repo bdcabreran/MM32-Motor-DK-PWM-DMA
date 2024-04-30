@@ -45,7 +45,7 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #define DBG_MSG(fmt, ...) do { } while(0)
 #endif
 
-#define DATA_LEN  (24)
+#define DATA_LEN  (6)
 u8 data[DATA_LEN] = {0};
 
 void TIM2_PWM_Init(u16 arr, u16 psc);
@@ -110,10 +110,15 @@ int main(void)
 void TransferComplete_Callback()
 {
   dma_transfer_cplt++;
-  TIM_SetCompare3(TIM2, 0);
+  // TIM_Cmd(TIM2, DISABLE);
+  // DMA_Cmd(DMA1_Channel1, DISABLE);
+
+  TIM_CtrlPWMOutputs(TIM2, DISABLE);
   TIM_Cmd(TIM2, DISABLE);
-  TIM_SetCounter(TIM2, 0);
   DMA_Cmd(DMA1_Channel1, DISABLE);
+
+  TIM_SetCompare3(TIM2, 0);
+  TIM_SetCounter(TIM2, 0);
 }
 
 void DMA1_Channel1_IRQHandler(void) {
@@ -294,7 +299,7 @@ void send_pwm(void)
 
     // update data 
     static uint8_t arr = 1;
-    if (arr < READ_REG(TIM2->ARR)) {
+    if (arr < READ_REG(TIM2->ARR) - 1) {
       for (size_t i = 0; i < DATA_LEN; i++) {
         data[i] = arr;
       }
@@ -307,10 +312,11 @@ void send_pwm(void)
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
     exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length
 
-    TIM_CtrlPWMOutputs(TIM2, ENABLE);
-    TIM_Cmd(TIM2, ENABLE);
-    TIM_SetCounter(TIM2, 0);
     DMA_Cmd(DMA1_Channel1, ENABLE);
+    TIM_CtrlPWMOutputs(TIM2, ENABLE);
+    TIM_SetCompare3(TIM2, 0);
+    TIM_SetCounter(TIM2, 0);
+    TIM_Cmd(TIM2, ENABLE);
 
     DBG_MSG("arr:  %d, dma_transfer_cplt: %d\r\n", arr, dma_transfer_cplt);
   }
