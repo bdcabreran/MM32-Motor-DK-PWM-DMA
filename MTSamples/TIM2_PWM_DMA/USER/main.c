@@ -53,6 +53,7 @@ void TIM2_GPIO_Init(void);
 void blink_led(void);
 void TIM2_IRQ_Init(void);
 void print_msg(void);
+void send_pwm(void);
 void TIM2_DMA_Init(void);
 
 /** Extern Variables*/
@@ -100,12 +101,7 @@ int main(void)
     {
         blink_led();
         print_msg();
-
-        if (dma_transfer_cplt)
-        {
-            dma_transfer_cplt = 0;
-            DBG_MSG("DMA Transfer Complete\r\n");
-        }
+        send_pwm();
 
     }
 }
@@ -251,7 +247,7 @@ void TIM2_DMA_Init(void)
     DMA_InitStruct.DMA_MemoryInc             = DMA_MemoryInc_Enable;
     DMA_InitStruct.DMA_PeripheralDataSize    = DMA_PeripheralDataSize_Word;
     DMA_InitStruct.DMA_MemoryDataSize        = DMA_MemoryDataSize_Byte;
-    DMA_InitStruct.DMA_Mode                  = DMA_Mode_Circular;
+    DMA_InitStruct.DMA_Mode                  = DMA_Mode_Normal;
     DMA_InitStruct.DMA_Priority              = DMA_Priority_High;
     DMA_InitStruct.DMA_M2M                   = DMA_M2M_Disable;
     DMA_InitStruct.DMA_Auto_reload = DMA_Auto_Reload_Disable;
@@ -284,6 +280,25 @@ void print_msg(void)
     // DBG_MSG("TIM2 ARR: %d\r\n", READ_REG(TIM2->ARR));
     // DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
     // DBG_MSG("TIM Update Cnt: %d\r\n", TimUpdateCnt);
+    DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt);
+  }
+}
+
+void send_pwm(void)
+{
+  static uint32_t last_tick = 0;
+  if (Get_Systick_Cnt() - last_tick > 1000)
+  {
+    last_tick = Get_Systick_Cnt();
+
+    exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
+    exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length
+
+    TIM_CtrlPWMOutputs(TIM2, ENABLE);
+    TIM_Cmd(TIM2, ENABLE);
+    TIM_SetCounter(TIM2, 0);
+    DMA_Cmd(DMA1_Channel1, ENABLE);
+
     DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt);
   }
 }
