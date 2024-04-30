@@ -45,7 +45,7 @@ extern uint32_t SystemCoreClock;
 #define WS2812_RESET_PERIOD   50                              // Reset pulse period
 
 #define Prescaler          1
-#define PWM_Frequency      100000  // 800kHz
+#define PWM_Frequency      800000  // 800kHz
 #define WS2812_PERIOD      ((SystemCoreClock / PWM_Frequency) - 1)
 
 
@@ -65,6 +65,8 @@ uint32_t led_data[WS2812_NUM_LEDS * WS2812_BIT_PER_LED]; // 24 bits per LED
 #else 
 uint8_t led_data[WS2812_NUM_LEDS * WS2812_BIT_PER_LED]; // 24 bits per LED
 #endif 
+
+uint32_t pwm_period = 0;
 
 #define USE_CIRCULAR_MODE 0
 
@@ -191,7 +193,7 @@ void ws2812_DMA_Channel1_Init(void)
     DMA_InitStruct.DMA_Mode = DMA_Mode_Normal;
     DMA_InitStruct.DMA_Auto_reload = DMA_Auto_Reload_Disable;
     #endif
-    DMA_InitStruct.DMA_Priority = DMA_Priority_High;
+    DMA_InitStruct.DMA_Priority = DMA_Priority_VeryHigh;
     DMA_InitStruct.DMA_M2M = DMA_M2M_Disable;
 
     DMA_Init(WS2812_DMA_CH, &DMA_InitStruct);
@@ -203,124 +205,39 @@ void ws2812_DMA_Channel1_IT_Init()
     DMA_ITConfig(WS2812_DMA_CH, DMA_IT_TC | DMA_IT_HT | DMA_IT_TE, ENABLE);
     NVIC_InitTypeDef NVIC_InitStruct;
     NVIC_InitStruct.NVIC_IRQChannel = WS2812_DMA_IRQ;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 1;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 }
 
-void ws2812_TIM_PWM_Init()
-{
-    // Enable Clocks
-    RCC_APB1PeriphClockCmd(RCC_APB1ENR_TIM2EN, ENABLE);
-
-    /******************************************************/
-    /* Configure the NVIC to handle TIM2 update interrupt */
-    /******************************************************/
-    NVIC_InitTypeDef NVIC_InitStruct;
-    NVIC_InitStruct.NVIC_IRQChannel = TIM2_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 2;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStruct);
-
-    /******************************/
-    /* Peripheral clocks enabling */
-    /******************************/
-    // Initialize the Timer and PWM
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-    TIM_TimeBaseStructInit(&TIM_TimeBaseInitStruct);
-    RCC_APB1PeriphClockCmd(RCC_APB1ENR_TIM2EN, ENABLE);
-
-    TIM_TimeBaseInitStruct.TIM_Period = WS2812_PERIOD; // 800kHz PWM -> 120 - 1 = 119
-    TIM_TimeBaseInitStruct.TIM_Prescaler = 0;
-    TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
-    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-    
-    /* Set the repetition counter in order to generate one update event every 24 */
-    /* counter cycles.                                                          */
-    TIM_TimeBaseInit(WS2812_TIM, &TIM_TimeBaseInitStruct);    
-    TIM_ARRPreloadConfig(WS2812_TIM, ENABLE);
-
-    // WRITE_REG(TIM2->RCR, TIM_TimeBaseInitStruct.TIM_RepetitionCounter);
-
-    TIM_OCInitTypeDef TIM_OCInitStruct;
-    TIM_OCStructInit(&TIM_OCInitStruct);
-    TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM1;
-    TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStruct.TIM_OutputNState = TIM_OutputNState_Enable;
-    TIM_OCInitStruct.TIM_Pulse = PWM_HIGH_1; // Set initially for '1', change dynamically
-    TIM_OCInitStruct.TIM_OCPolarity      = TIM_OCPolarity_Low;
-    TIM_OCInitStruct.TIM_OCIdleState = TIM_OCIdleState_Reset; // Ensure the OC Idle State is set to Reset
-
-
-    // Fill buffer with a defined Duty Cycle 
-    // for (uint8_t i = 0; i < WS2812_NUM_LEDS * WS2812_BIT_PER_LED; i++) {
-    //     led_data[i] = 60;
-    // }
-
-    led_data[0] = 40;
-    led_data[1] = 60;
-    led_data[2] = 80;
-    led_data[3] = 90;
-
-
-    TIM_OC3Init(WS2812_TIM, &TIM_OCInitStruct);
-    // TIM_SelectOCxM(WS2812_TIM, TIM_Channel_3, TIM_OCMode_PWM1);
-    // TIM_SetCompare3(WS2812_TIM, led_data[0]);
-    // TIM_OC3PreloadConfig(WS2812_TIM, TIM_OCPreload_Enable);
-
-    /****************************/
-    /* TIM2 DMA requests set-up */
-    /****************************/
-    // TIM_DMACmd(WS2812_TIM, TIM_DMA_CC3 | TIM_DMA_Update, ENABLE);
-    TIM_DMACmd(WS2812_TIM, TIM_DMA_CC3 , ENABLE);
-
-    //TIM_DMAConfig(WS2812_TIM, TIM_DMABase_CCR3, TIM_DMABurstLength_1Byte);
-
-    // Enable IT
-    // TIM_ClearFlag(WS2812_TIM, TIM_FLAG_Update | TIM_FLAG_CC3);
-    // TIM_ITConfig(WS2812_TIM, TIM_IT_Update | TIM_FLAG_CC3, ENABLE);
-    // TIM_DMACmd(WS2812_TIM, TIM_DMA_CC3, ENABLE);
-    // TIM_ITConfig(WS2812_TIM, TIM_IT_CC3, ENABLE);
-    // TIM_DMACmd(WS2812_TIM, TIM_DMA_CC3, DISABLE);
-
-    /**********************************/
-    /* Start output signal generation */
-    /**********************************/
-    // // TIM_CCxCmd(WS2812_TIM, TIM_Channel_3, TIM_CCx_Enable);
-    // TIM_CtrlPWMOutputs(WS2812_TIM, ENABLE);
-
-    // // // Enable the TIM2
-    //  TIM_Cmd(WS2812_TIM, ENABLE);
-
-    /* Force update generation */
-    // TIM_GenerateEvent(WS2812_TIM, TIM_EventSource_Update);
-}
 
 
 void pwm_timer_init(void) {
     // Enable timer clock
     RCC_APB1PeriphClockCmd(RCC_APB1ENR_TIM2EN, ENABLE); // Assuming TIM2 is used, modify as necessary for your timer
 
-    // Enable interrupt
-    NVIC_InitTypeDef NVIC_InitStruct;
-    NVIC_InitStruct.NVIC_IRQChannel = TIM2_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 1;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStruct);
+
 
     // Set up the timer
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
     TIM_TimeBaseStructure.TIM_Period = WS2812_PERIOD;
-    TIM_TimeBaseStructure.TIM_Prescaler = 0; 
+    TIM_TimeBaseStructure.TIM_Prescaler = Prescaler - 1; 
     TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
 
+    // Enable interrupt
+    NVIC_InitTypeDef NVIC_InitStruct;
+    NVIC_InitStruct.NVIC_IRQChannel = TIM2_IRQn;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStruct);
+
     // Set up PWM mode for the timer's channel
     TIM_OCInitTypeDef TIM_OCInitStructure;
     TIM_OCStructInit(&TIM_OCInitStructure);
-    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_Pulse = PWM_HIGH_0; // CCRx register value for desired duty cycle
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High; // Output polarity
@@ -340,12 +257,15 @@ void pwm_timer_init(void) {
     // Enable TIM Update DMA request
     // TIM_DMAConfig(TIM2, TIM_DMABase_CCR3, TIM_DMABurstLength_1Byte); // Assuming channel 3 for DMA burst
     // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
+    
     TIM_DMACmd(TIM2, TIM_DMA_CC3, ENABLE);
     TIM_ClearFlag(TIM2, TIM_FLAG_Update);
 
 
 
     // Enable IT
+    TIM_ClearFlag(TIM2, TIM_FLAG_CC3);
+
     //TIM_ITConfig(WS2812_TIM, TIM_IT_CC3, ENABLE);
     // TIM_ITConfig(WS2812_TIM, TIM_IT_Update, ENABLE);
     TIM_CCxCmd(WS2812_TIM, TIM_Channel_3, TIM_CCx_Enable);
@@ -355,42 +275,6 @@ void pwm_timer_init(void) {
 
     // Enable the timer
     TIM_Cmd(TIM2, DISABLE);
-}
-
-void pwm_timer_init2(void) {
-    // Enable timer clock
-    RCC_APB1PeriphClockCmd(RCC_APB1ENR_TIM2EN, ENABLE); // Assuming TIM2 is used, modify as necessary for your timer
-
-    // Set up the timer
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
-    TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-    TIM_TimeBaseStructure.TIM_Period = WS2812_PERIOD;
-    TIM_TimeBaseStructure.TIM_Prescaler = 0; // No prescaler
-    TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
-
-    // Set up PWM mode for the timer's channel
-    TIM_OCInitTypeDef TIM_OCInitStructure;
-    TIM_OCStructInit(&TIM_OCInitStructure);
-    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStructure.TIM_Pulse = PWM_HIGH_0; // CCRx register value for desired duty cycle
-    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High; // Output polarity
-
-    // Init the PWM channel with the above configuration
-    TIM_OC3PreloadConfig(TIM2, TIM_OCPreload_Enable);
-
-    // Enable TIM2 ARR Preload
-    TIM_ARRPreloadConfig(TIM2, ENABLE);
-
-    // Start TIM2
-    TIM_Cmd(TIM2, ENABLE);
-
-    // Enable TIM2 PWM outputs
-    TIM_CtrlPWMOutputs(TIM2, ENABLE);
-
-    //TIM_DMACmd(TIM2, TIM_DMA_CC3, ENABLE);
 }
 
 
