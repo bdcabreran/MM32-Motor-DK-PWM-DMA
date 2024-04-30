@@ -19,7 +19,7 @@
 
 extern uint32_t SystemCoreClock;
 
-#define WS2812_USE_DMA 1
+#define WS2812_USE_DMA 0
 
 #if WS2812_USE_DMA
 #define WS2812_USE_DMA_IRQ_ENABLE 1
@@ -45,7 +45,7 @@ extern uint32_t SystemCoreClock;
 #define WS2812_RESET_PERIOD   50                              // Reset pulse period
 
 #define Prescaler          1
-#define PWM_Frequency      800000  // 800kHz
+#define PWM_Frequency      600000  // 800kHz
 #define WS2812_PERIOD      ((SystemCoreClock / PWM_Frequency) - 1)
 
 
@@ -66,7 +66,6 @@ uint32_t led_data[WS2812_NUM_LEDS * WS2812_BIT_PER_LED]; // 24 bits per LED
 uint8_t led_data[WS2812_NUM_LEDS * WS2812_BIT_PER_LED]; // 24 bits per LED
 #endif 
 
-uint32_t pwm_period = 0;
 
 #define USE_CIRCULAR_MODE 0
 
@@ -216,13 +215,11 @@ void pwm_timer_init(void) {
     // Enable timer clock
     RCC_APB1PeriphClockCmd(RCC_APB1ENR_TIM2EN, ENABLE); // Assuming TIM2 is used, modify as necessary for your timer
 
-
-
     // Set up the timer
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
     TIM_TimeBaseStructure.TIM_Period = WS2812_PERIOD;
-    TIM_TimeBaseStructure.TIM_Prescaler = Prescaler - 1; 
+    TIM_TimeBaseStructure.TIM_Prescaler = 0; 
     TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
@@ -241,40 +238,13 @@ void pwm_timer_init(void) {
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_Pulse = PWM_HIGH_0; // CCRx register value for desired duty cycle
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High; // Output polarity
+    TIM_OC3Init(TIM2, &TIM_OCInitStructure);
 
-    // Init the PWM channel with the above configuration
-    TIM_OC3Init(TIM2, &TIM_OCInitStructure); // Assuming using channel 3, modify as necessary
-
-    // Enable the corresponding preload register
-    TIM_OC3PreloadConfig(TIM2, TIM_OCPreload_Enable); // Assuming using channel 3, modify as necessary
+    TIM_OC3PreloadConfig(TIM2, TIM_OCPreload_Enable);
     TIM_ARRPreloadConfig(TIM2, ENABLE);
-    TIM_SetCounter(TIM2, 0);
-
-    // Necessary ?
-    //TIM_SelectInputTrigger(TIM2, TIM_TS_ITR0); // Select the input trigger
-    //TIM_SelectMasterSlaveMode(TIM2, TIM_MasterSlaveMode_Disable); // Enable the Master/Slave mode
-
-    // Enable TIM Update DMA request
-    // TIM_DMAConfig(TIM2, TIM_DMABase_CCR3, TIM_DMABurstLength_1Byte); // Assuming channel 3 for DMA burst
-    // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
-    
-    TIM_DMACmd(TIM2, TIM_DMA_CC3, ENABLE);
-    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
-
-
-
-    // Enable IT
-    TIM_ClearFlag(TIM2, TIM_FLAG_CC3);
-
-    //TIM_ITConfig(WS2812_TIM, TIM_IT_CC3, ENABLE);
-    // TIM_ITConfig(WS2812_TIM, TIM_IT_Update, ENABLE);
-    TIM_CCxCmd(WS2812_TIM, TIM_Channel_3, TIM_CCx_Enable);
-
-    // Enable PWM 
     TIM_CtrlPWMOutputs(TIM2, ENABLE);
 
-    // Enable the timer
-    TIM_Cmd(TIM2, DISABLE);
+    TIM_Cmd(TIM2, ENABLE);
 }
 
 

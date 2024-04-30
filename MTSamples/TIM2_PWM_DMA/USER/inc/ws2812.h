@@ -45,7 +45,7 @@
 
 // Define the number of LEDs in the strip
 #define WS2812_NUM_LEDS      1
-#define WS2812_BIT_PER_LED   6      // 8 bits per color, RGB
+#define WS2812_BIT_PER_LED   8      // 8 bits per color, RGB
 
 void ws2812Init(void);
 void WS2812SetPixelColor(uint8_t led, uint8_t r, uint8_t g, uint8_t b);
