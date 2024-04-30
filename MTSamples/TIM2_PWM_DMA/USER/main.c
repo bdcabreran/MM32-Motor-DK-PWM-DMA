@@ -75,7 +75,7 @@ int main(void)
     
     TIM2_GPIO_Init();
     TIM2_IRQ_Init();
-    uint32_t pwm_freq = 1600000;
+    uint32_t pwm_freq = 800000;
     uint32_t arr = ((SystemCoreClock / pwm_freq) - 1);
     TIM2_PWM_Init(arr, 0);
     TIM2_DMA_Init();
@@ -287,7 +287,7 @@ void print_msg(void)
 void send_pwm(void)
 {
   static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 1000)
+  if (Get_Systick_Cnt() - last_tick > 200)
   {
     last_tick = Get_Systick_Cnt();
 
