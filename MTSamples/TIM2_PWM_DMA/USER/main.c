@@ -310,19 +310,7 @@ void send_pwm(void)
   {
     last_tick = Get_Systick_Cnt();
 
-    // update data 
-    //updateData(data, DATA_LEN);
-
-
-    // int i = 0;
-    // for (i = 0; i < DATA_LEN / 2; i++) {
-    //   data[i] = PWM_HIGH_0;
-    // }
-    
-    // for (i = DATA_LEN / 2; i < DATA_LEN; i++) {
-    //   data[i] = PWM_HIGH_1;
-    // }
-
+    #if 0
     static uint8_t counter = 0;
     uint8_t red = 0;
     uint8_t green = 0;
@@ -339,9 +327,14 @@ void send_pwm(void)
         blue = 255;
         break;
     }
-
     counter++;
+    set_pixel_color(0, red, green, blue, data);
+    #endif 
 
+    // GRB
+    uint8_t green = 100;
+    uint8_t red = 100;
+    uint8_t blue = 100;
     set_pixel_color(0, red, green, blue, data);
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
