@@ -46,7 +46,7 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #endif
 
 #define DATA_LEN  (24)
-u16 data[DATA_LEN] = {0};
+u8 data[DATA_LEN] = {0};
 
 void TIM2_PWM_Init(u16 arr, u16 psc);
 void TIM2_GPIO_Init(void);
@@ -250,7 +250,7 @@ void TIM2_DMA_Init(void)
     //Transfer completed memory address increment
     DMA_InitStruct.DMA_MemoryInc             = DMA_MemoryInc_Enable;
     DMA_InitStruct.DMA_PeripheralDataSize    = DMA_PeripheralDataSize_Word;
-    DMA_InitStruct.DMA_MemoryDataSize        = DMA_MemoryDataSize_HalfWord;
+    DMA_InitStruct.DMA_MemoryDataSize        = DMA_MemoryDataSize_Byte;
     DMA_InitStruct.DMA_Mode                  = DMA_Mode_Circular;
     DMA_InitStruct.DMA_Priority              = DMA_Priority_High;
     DMA_InitStruct.DMA_M2M                   = DMA_M2M_Disable;
