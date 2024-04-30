@@ -48,6 +48,8 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #define DATA_LEN  (24)
 u8 data[DATA_LEN] = {0};
 
+#define WS2812_BIT_PER_LED  (DATA_LEN)
+
 void TIM2_PWM_Init(u16 arr, u16 psc);
 void TIM2_GPIO_Init(void);
 void blink_led(void);
@@ -55,13 +57,27 @@ void TIM2_IRQ_Init(void);
 void print_msg(void);
 void send_pwm(void);
 void TIM2_DMA_Init(void);
+void set_pixel_color(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue, uint8_t* led_data);
 
 /** Extern Variables*/
 extern uint32_t SystemCoreClock;
 volatile uint32_t TimUpdateCnt = 0;
-
 volatile uint8_t dma_transfer_cplt = 0;
 
+#define INVERT_LOGIC 1
+
+// frequency = 650000Hz
+// SysFreq = 96000000Hz
+// arr = (SysFreq / frequency) - 1 = 146
+// PWM_Mode = 2
+
+#if INVERT_LOGIC
+#define PWM_HIGH_0 67
+#define PWM_HIGH_1 34
+#else 
+#define PWM_HIGH_0 34
+#define PWM_HIGH_1 67
+#endif
 
 int main(void)
 {
@@ -69,7 +85,6 @@ int main(void)
     Board_Gpio_Af_Init();
     Drv_Uart_Init(115200);
     Board_Gpio_Init();
-
 
     DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
     
@@ -296,16 +311,38 @@ void send_pwm(void)
     last_tick = Get_Systick_Cnt();
 
     // update data 
-    static uint8_t arr = 20;
-    if (arr < READ_REG(TIM2->ARR) - 1) {
-      for (size_t i = 0; i < DATA_LEN; i++) {
-        data[i] = arr;
-      }
+    //updateData(data, DATA_LEN);
+
+
+    // int i = 0;
+    // for (i = 0; i < DATA_LEN / 2; i++) {
+    //   data[i] = PWM_HIGH_0;
+    // }
+    
+    // for (i = DATA_LEN / 2; i < DATA_LEN; i++) {
+    //   data[i] = PWM_HIGH_1;
+    // }
+
+    static uint8_t counter = 0;
+    uint8_t red = 0;
+    uint8_t green = 0;
+    uint8_t blue = 0;
+
+    switch (counter % 3) {
+      case 0:
+        red = 255;
+        break;
+      case 1:
+        green = 255;
+        break;
+      case 2:
+        blue = 255;
+        break;
     }
-    else {
-      arr = 20;
-    }
-    arr += 1;
+
+    counter++;
+
+    set_pixel_color(0, red, green, blue, data);
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
     exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length
@@ -316,10 +353,27 @@ void send_pwm(void)
     TIM_SetCounter(TIM2, 0);
     TIM_Cmd(TIM2, ENABLE);
 
-    DBG_MSG("arr:  %d, dma_transfer_cplt: %d\r\n", arr, dma_transfer_cplt);
+    DBG_MSG("dma_transfer_cplt: %d\r\n",dma_transfer_cplt);
   }
 }
 
+
+// void updateData(uint8_t* data, size_t DATA_LEN) {
+//     // update data 
+//     static uint8_t arr = 20;
+//     if (arr < READ_REG(TIM2->ARR) - 1) {
+//       for (int i = 0; i < DATA_LEN; i++) {
+//         data[i] = arr;
+//       }
+//     }
+//     else {
+//       arr = 20;
+//     }
+//     arr += 1;
+
+//     DBG_MSG("arr:  %d\r\n", arr);
+// }
+
 /**
   * @}
 */
@@ -327,3 +381,30 @@ void send_pwm(void)
 /**
   * @}
 */
+
+
+// Function to set a single LED at a particular index
+void set_pixel_color(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue, uint8_t* led_data) {
+
+    uint32_t pos = led_index * WS2812_BIT_PER_LED;
+    uint8_t mask;
+    int i = 0;
+
+    // GREEN color
+    for (i = 0; i < 8; i++) {
+        mask = (green & (1 << (7 - i))) ? PWM_HIGH_1 : PWM_HIGH_0;
+        led_data[pos++] = mask;
+    }
+
+    // RED color
+    for (i = 0; i < 8; i++) {
+        mask = (red & (1 << (7 - i))) ? PWM_HIGH_1 : PWM_HIGH_0;
+        led_data[pos++] = mask;
+    }
+
+    // BLUE color
+    for (i = 0; i < 8; i++) {
+        mask = (blue & (1 << (7 - i))) ? PWM_HIGH_1 : PWM_HIGH_0;
+        led_data[pos++] = mask;
+    }
+}
