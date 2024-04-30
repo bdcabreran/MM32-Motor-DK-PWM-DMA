@@ -88,7 +88,11 @@ int main(void)
     DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
     DBG_MSG("led data addr = 0x%X\r\n", &led_data[0]);
 
+    
 		ws2812Init();
+
+    DBG_MSG("TIM2->ARR = %d\r\n", TIM2->ARR);
+
 		//WS2812_SetPixelColor(0, 0, 0, 0, led_data);
 		//WS2812_SetPixelColor32(0, 0, 0, 0, led_data);
 
@@ -111,7 +115,7 @@ int main(void)
     while(1)
     {
 
-				#if 1
+				#if 0
         if (u8TransferCplt)
         {
           u8TransferCplt = 0;
@@ -120,6 +124,8 @@ int main(void)
           Systick_Delay(5);
         }
 				#endif
+
+        #if 1
 
         // // blink led
         if(Get_Systick_Cnt() - last_tick > 1000)
@@ -135,7 +141,7 @@ int main(void)
             //WS2812_SetPixelColor32(0, r, 0, 0, led_data);
             r = (r + 1) % 255;
 						
-					  DBG_MSG("Start DMA\r\n");
+					  //DBG_MSG("Start DMA\r\n");
 					   //DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
 
 						Start_WS2812_PWM_DMA();
@@ -160,6 +166,7 @@ int main(void)
             }
 					
         }
+        #endif
     }
 }
 
