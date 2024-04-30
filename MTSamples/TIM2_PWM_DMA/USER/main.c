@@ -45,7 +45,7 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #define DBG_MSG(fmt, ...) do { } while(0)
 #endif
 
-#define DATA_LEN  (6)
+#define DATA_LEN  (24)
 u8 data[DATA_LEN] = {0};
 
 void TIM2_PWM_Init(u16 arr, u16 psc);
@@ -75,7 +75,7 @@ int main(void)
     
     TIM2_GPIO_Init();
     TIM2_IRQ_Init();
-    uint32_t pwm_freq = 800000;
+    uint32_t pwm_freq = 650000;
     uint32_t arr = ((SystemCoreClock / pwm_freq) - 1);
     TIM2_PWM_Init(arr, 0);
     TIM2_DMA_Init();
@@ -110,11 +110,9 @@ int main(void)
 void TransferComplete_Callback()
 {
   dma_transfer_cplt++;
-  // TIM_Cmd(TIM2, DISABLE);
-  // DMA_Cmd(DMA1_Channel1, DISABLE);
 
-  TIM_CtrlPWMOutputs(TIM2, DISABLE);
   TIM_Cmd(TIM2, DISABLE);
+  TIM_CtrlPWMOutputs(TIM2, DISABLE);
   DMA_Cmd(DMA1_Channel1, DISABLE);
 
   TIM_SetCompare3(TIM2, 0);
@@ -298,14 +296,14 @@ void send_pwm(void)
     last_tick = Get_Systick_Cnt();
 
     // update data 
-    static uint8_t arr = 1;
+    static uint8_t arr = 20;
     if (arr < READ_REG(TIM2->ARR) - 1) {
       for (size_t i = 0; i < DATA_LEN; i++) {
         data[i] = arr;
       }
     }
     else {
-      arr = 1;
+      arr = 20;
     }
     arr += 1;
 
