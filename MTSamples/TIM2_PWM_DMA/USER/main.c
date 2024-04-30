@@ -332,9 +332,14 @@ void send_pwm(void)
     #endif 
 
     // GRB
-    uint8_t green = 100;
-    uint8_t red = 100;
-    uint8_t blue = 100;
+    uint8_t green = 0;
+    uint8_t red = 0;
+    uint8_t blue = 0;
+    // uint8_t green = rand() % 255;
+    // uint8_t red = rand() % 255;
+    // uint8_t blue = rand() % 255;
+
+
     set_pixel_color(0, red, green, blue, data);
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
@@ -400,4 +405,5 @@ void set_pixel_color(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue
         mask = (blue & (1 << (7 - i))) ? PWM_HIGH_1 : PWM_HIGH_0;
         led_data[pos++] = mask;
     }
+
 }
