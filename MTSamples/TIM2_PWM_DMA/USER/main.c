@@ -45,7 +45,7 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #define DBG_MSG(fmt, ...) do { } while(0)
 #endif
 
-#define DATA_LEN  (24)
+#define DATA_LEN  (24*3)
 u8 data[DATA_LEN] = {0};
 
 #define WS2812_BIT_PER_LED  (DATA_LEN)
@@ -207,7 +207,11 @@ void TIM2_PWM_Init(u16 arr, u16 psc)
 
     TIM_OCStructInit(&TIM_OCInitStruct);
     //Select Timer Mode: TIM Pulse Width Modulation Mode 2
+    #if INVERT_LOGIC
     TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM2;
+    #else
+    TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM1;
+    #endif
     TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
     //Setting the Pulse Value of the Capture Comparison Register to be Loaded
     TIM_OCInitStruct.TIM_Pulse = 0;
@@ -335,12 +339,11 @@ void send_pwm(void)
     uint8_t green = 0;
     uint8_t red = 0;
     uint8_t blue = 0;
-    // uint8_t green = rand() % 255;
-    // uint8_t red = rand() % 255;
-    // uint8_t blue = rand() % 255;
 
-
-    set_pixel_color(0, red, green, blue, data);
+    //memset(data, 0, DATA_LEN);
+    set_pixel_color(0, red, 255, blue, data);
+    set_pixel_color(1, 255, green, blue, data);
+    set_pixel_color(2, red, green, 255, data);
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
     exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length
