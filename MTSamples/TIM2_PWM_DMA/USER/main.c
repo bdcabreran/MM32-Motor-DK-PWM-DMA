@@ -30,6 +30,7 @@
 #include "drv_uart.h"
 #include "pwm_dma.h"
 #include "neopixel.h"
+#include "neopixel_animation.h"
 
 #define DEBUG_BUFFER_SIZE 256
 char debugBuffer[DEBUG_BUFFER_SIZE];
@@ -46,12 +47,6 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #define DBG_MSG(fmt, ...) do { } while(0)
 #endif
 
-
-#define NUM_LEDS 10
-#define DATA_LEN  (NEOPIXEL_BIT_PER_LED*NUM_LEDS)
-u8 data[DATA_LEN] = {0};
-
-
 void blink_led(void);
 void print_msg(void);
 void send_pwm(void);
@@ -63,6 +58,7 @@ extern uint32_t SystemCoreClock;
 volatile uint32_t TimUpdateCnt = 0;
 volatile uint8_t dma_transfer_cplt_cnt = 0;
 neopixel_t neopixel;
+neopixel_animation_t anim;
 
 
 int main(void)
@@ -75,8 +71,21 @@ int main(void)
     DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
     PWM_DMA_Init();
 
-    neopixel_init(&neopixel, data, DATA_LEN, PWM_DMA_Start, PWM_DMA_Stop);
+    neopixel_init(&neopixel, PWM_DMA_Start, PWM_DMA_Stop);
+    neopixel_anim_init(&anim, &neopixel);    
     
+    //neopixel_anim_blink(&anim, 100, 0);
+
+    // neopixel_set_pixel_color(&neopixel, 0, 255, 0, 0);
+    // neopixel_anim_fade_in(&anim, 100, 100);
+
+    // neopixel_set_pixel_color(&neopixel, 0, 255, 0, 0);
+    // neopixel_anim_fade_out(&anim, 100, 100);
+
+    neopixel_anim_rainbow(&anim, 500);
+
+    // neopixel_set_pixel_color_rgb(&neopixel, 0, 0x00FF00); // Green
+    // neopixel_update(&neopixel);
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
 		
@@ -84,7 +93,8 @@ int main(void)
     {
       blink_led();
       print_msg();
-      send_pwm();
+      //send_pwm();
+      neopixel_anim_update(&anim);
     }
 }
 
@@ -160,14 +170,14 @@ void print_msg(void)
     // DBG_MSG("TIM2 ARR: %d\r\n", READ_REG(TIM2->ARR));
     // DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
     // DBG_MSG("TIM Update Cnt: %d\r\n", TimUpdateCnt);
-    // DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt_cnt);
+    DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt_cnt);
   }
 }
 
 void send_pwm(void)
 {
   static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 100)
+  if (Get_Systick_Cnt() - last_tick > 500)
   {
     last_tick = Get_Systick_Cnt();
 
@@ -197,11 +207,28 @@ void send_pwm(void)
     uint8_t red = 0;
     uint8_t blue = 0;
 
-    neopixel_set_pixel_color(&neopixel, 5, 255, 0, 0);
+    //neopixel_set_pixel_color(&neopixel, 5, 255, 0, 0);
     // neopixel_set_pixel_color_rgb(&neopixel, 6, 0x00FF00); // Green
-    neopixel_update(&neopixel);
+    //neopixel_update(&neopixel);
 
-    DBG_MSG("dma_transfer_cplt_cnt: %d\r\n",dma_transfer_cplt_cnt);
+    // static uint8_t brightness = 100;
+
+    // if (brightness > 0) {
+    //   brightness--;
+    // } else {
+    //   brightness = 100;
+    // }
+
+    // neopixel_set_brightness(&neopixel, brightness);
+    // neopixel_update(&neopixel);
+    // DBG_MSG("brightness: %d\r\n", brightness);
+
+
+    //neopixel_set_pixel_color_rgb(&neopixel, 0, 0x00FFFF); // Green
+    //neopixel_update(&neopixel);
+
+
+    //DBG_MSG("dma_transfer_cplt_cnt: %d\r\n",dma_transfer_cplt_cnt);
   }
 }
 

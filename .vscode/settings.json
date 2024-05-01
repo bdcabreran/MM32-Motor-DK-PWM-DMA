@@ -11,6 +11,7 @@
         "mm32_device.h": "c",
         "drv_uart.h": "c",
         "pwm_dma.h": "c",
-        "neopixel.h": "c"
+        "neopixel.h": "c",
+        "neopixel_animation.h": "c"
     }
 }
