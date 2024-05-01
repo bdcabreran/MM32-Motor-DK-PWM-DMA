@@ -34,6 +34,7 @@
 #define DEBUG_BUFFER_SIZE 256
 char debugBuffer[DEBUG_BUFFER_SIZE];
 
+#define USE_PWM_MODE_2 0
 #define ENABLE_DBG_MSG 1
 
 #if ENABLE_DBG_MSG
@@ -45,10 +46,12 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #define DBG_MSG(fmt, ...) do { } while(0)
 #endif
 
-#define DATA_LEN  (24)
+
+#define NUM_LEDS 1
+#define WS2812_BIT_PER_LED 24
+#define DATA_LEN  (WS2812_BIT_PER_LED*NUM_LEDS)
 u8 data[DATA_LEN] = {0};
 
-#define WS2812_BIT_PER_LED  (DATA_LEN)
 
 void TIM2_PWM_Init(u16 arr, u16 psc);
 void TIM2_GPIO_Init(void);
@@ -58,26 +61,21 @@ void print_msg(void);
 void send_pwm(void);
 void TIM2_DMA_Init(void);
 void set_pixel_color(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue, uint8_t* led_data);
+void updateLEDColor(int led_num);
 
 /** Extern Variables*/
 extern uint32_t SystemCoreClock;
 volatile uint32_t TimUpdateCnt = 0;
-volatile uint8_t dma_transfer_cplt = 0;
+volatile uint8_t dma_transfer_cplt_cnt = 0;
 
-#define INVERT_LOGIC 1
 
-// frequency = 650000Hz
+// frequency = 800000Hz
 // SysFreq = 96000000Hz
-// arr = (SysFreq / frequency) - 1 = 146
-// PWM_Mode = 2
-
-#if INVERT_LOGIC
-#define PWM_HIGH_0 67
-#define PWM_HIGH_1 34
-#else 
+// arr = (SysFreq / frequency) - 1 = 119
+// PWM_Mode = 1
 #define PWM_HIGH_0 34
 #define PWM_HIGH_1 67
-#endif
+
 
 int main(void)
 {
@@ -99,8 +97,7 @@ int main(void)
     TIM_SetCompare3(TIM2, 0);
     for (size_t i = 0; i < DATA_LEN; i++)
     {
-      //data[i] = READ_REG(TIM2->ARR)/2;
-      data[i] = 30;
+      data[i] = PWM_HIGH_0;
     }
     DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
     DBG_MSG("data[0]: %d\r\n", data[0]);  
@@ -124,7 +121,7 @@ int main(void)
 
 void TransferComplete_Callback()
 {
-  dma_transfer_cplt++;
+  dma_transfer_cplt_cnt++;
 
   TIM_Cmd(TIM2, DISABLE);
   TIM_CtrlPWMOutputs(TIM2, DISABLE);
@@ -207,7 +204,7 @@ void TIM2_PWM_Init(u16 arr, u16 psc)
 
     TIM_OCStructInit(&TIM_OCInitStruct);
     //Select Timer Mode: TIM Pulse Width Modulation Mode 2
-    #if INVERT_LOGIC
+    #if USE_PWM_MODE_2
     TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM2;
     #else
     TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM1;
@@ -229,8 +226,8 @@ void TIM2_PWM_Init(u16 arr, u16 psc)
     //Enable the DMA request
     TIM_DMACmd(TIM2, TIM_DMA_CC3, ENABLE);
 
-    TIM_CtrlPWMOutputs(TIM2, DISABLE);
     TIM_Cmd(TIM2, DISABLE);
+    TIM_CtrlPWMOutputs(TIM2, DISABLE);
 }
 
 void TIM2_IRQ_Init(void)
@@ -303,7 +300,7 @@ void print_msg(void)
     // DBG_MSG("TIM2 ARR: %d\r\n", READ_REG(TIM2->ARR));
     // DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
     // DBG_MSG("TIM Update Cnt: %d\r\n", TimUpdateCnt);
-    DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt);
+    // DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt_cnt);
   }
 }
 
@@ -341,20 +338,21 @@ void send_pwm(void)
     uint8_t blue = 0;
 
     //memset(data, 0, DATA_LEN);
-    set_pixel_color(0, red, 255, blue, data);
+    uint8_t my_value = 0x01<<7 | 0x01<<0;
+    set_pixel_color(0, my_value, my_value, my_value, data);
     // set_pixel_color(1, 255, green, blue, data);
     // set_pixel_color(2, red, green, 255, data);
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
     exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length
 
-    DMA_Cmd(DMA1_Channel1, ENABLE);
-    TIM_CtrlPWMOutputs(TIM2, ENABLE);
     TIM_SetCompare3(TIM2, 0);
     TIM_SetCounter(TIM2, 0);
     TIM_Cmd(TIM2, ENABLE);
+    TIM_CtrlPWMOutputs(TIM2, ENABLE);
+    DMA_Cmd(DMA1_Channel1, ENABLE);
 
-    DBG_MSG("dma_transfer_cplt: %d\r\n",dma_transfer_cplt);
+    DBG_MSG("dma_transfer_cplt_cnt: %d\r\n",dma_transfer_cplt_cnt);
   }
 }
 
