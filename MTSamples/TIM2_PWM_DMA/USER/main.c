@@ -47,7 +47,7 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #endif
 
 
-#define NUM_LEDS 1
+#define NUM_LEDS 10
 #define WS2812_BIT_PER_LED 24
 #define DATA_LEN  (WS2812_BIT_PER_LED*NUM_LEDS)
 u8 data[DATA_LEN] = {0};
@@ -307,7 +307,7 @@ void print_msg(void)
 void send_pwm(void)
 {
   static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 500)
+  if (Get_Systick_Cnt() - last_tick > 100)
   {
     last_tick = Get_Systick_Cnt();
 
@@ -338,10 +338,20 @@ void send_pwm(void)
     uint8_t blue = 0;
 
     //memset(data, 0, DATA_LEN);
-    uint8_t my_value = 0x01<<7 | 0x01<<0;
-    set_pixel_color(0, my_value, my_value, my_value, data);
+    //uint8_t my_value = 0x01<<7 | 0x01<<0;
+    //set_pixel_color(0, my_value, my_value, my_value, data);
     // set_pixel_color(1, 255, green, blue, data);
     // set_pixel_color(2, red, green, 255, data);
+
+  //  for (int i = 0; i < NUM_LEDS; i++) {
+  //     updateLEDColor(i);
+  //   }
+
+    set_pixel_color(0, 255, 255, 255, data);
+    set_pixel_color(1, 0, 255, 255, data);
+    set_pixel_color(2, 255, 255, 0, data);
+    set_pixel_color(3, 255, 0, 255, data);
+
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
     exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length
@@ -407,4 +417,45 @@ void set_pixel_color(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue
         led_data[pos++] = mask;
     }
 
+}
+
+
+void updateLEDColor(int led_num) {
+    static uint8_t green = 0;
+    static uint8_t red = 0;
+    static uint8_t blue = 0;
+    static int colorStage = 0;  // 0 = Green, 1 = Red, 2 = Blue
+
+    //DBG_MSG("g: %d, r: %d, b: %d, cS: %d\r\n", green, red, blue, colorStage);
+
+    // Check which color to increment
+    switch (colorStage) {
+        case 0:  // Green cycle
+            if (green < 255) {
+                green++;
+                set_pixel_color(led_num, red, green, blue, data);
+            } else {
+                green = 0;
+                colorStage = 1;
+            }
+            break;
+        case 1:  // Red cycle
+            if (red < 255) {
+                red++;
+                set_pixel_color(led_num, red, green, blue, data);
+            } else {
+                red = 0;
+                colorStage = 2;
+            }
+            break;
+        case 2:  // Blue cycle
+            if (blue < 255) {
+                blue++;
+                set_pixel_color(led_num, red, green, blue, data);
+            } else {
+                blue = 0;
+                colorStage = 0;
+            }
+            break;
+    }
 }
