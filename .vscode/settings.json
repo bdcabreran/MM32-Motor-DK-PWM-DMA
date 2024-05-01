@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "systick.h": "c",
+        "hal_conf.h": "c",
+        "hal_rcc.h": "c",
+        "hal_tim.h": "c",
+        "hal_dma.h": "c",
+        "hal_misc.h": "c",
+        "hal_gpio.h": "c",
+        "pwm.h": "c",
+        "mm32_device.h": "c",
+        "drv_uart.h": "c",
+        "pwm_dma.h": "c",
+        "neopixel.h": "c",
+        "neopixel_animation.h": "c"
+    }
+}

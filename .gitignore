@@ -1,0 +1,51 @@
+# Ignore Keil uVision specific files and directories
+# Keil project files
+#*.uvprojx
+*.uvoptx
+*.uvmpw
+*.uvopt
+*.uvguix.*
+*.uvoptbak
+*.uvprojbak
+*.uvmpwbak
+*_obj
+*_htm
+*.lst
+*.lsl
+*.sct
+*.bak
+*.depend
+*.o
+*.axf
+*.d
+*.lnp
+*.plg
+*.tra
+*.trc
+*.lastbuildstate
+*.crf
+*.dmp
+*.tra
+*.trc
+*.htm
+*.dep
+*.bak
+*.sct.bak
+*.wrn
+*.out
+*.lnp
+*.blx
+*.log
+*.axf
+*.exe
+
+# Ignore user-specific Keil uVision settings
+#*.uvoptx.user
+#*.uvprojx.user
+
+# Ignore generated files
+Debug/
+Release/
+_RTT/
+_IntFlash/
+_Html/
