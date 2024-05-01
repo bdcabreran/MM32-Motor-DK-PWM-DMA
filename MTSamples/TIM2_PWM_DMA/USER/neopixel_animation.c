@@ -104,6 +104,7 @@ void neopixel_anim_update(neopixel_animation_t *anim)
             anim->last_update = current_time;
         }
         break;
+        
     case ANIM_RAINBOW:
         if (elapsed_time > anim->delay) {
             // Calculate Wheel index based on the current LED index and the total number of LEDs
@@ -128,6 +129,31 @@ void neopixel_anim_update(neopixel_animation_t *anim)
         }
         break;
 
+    case ANIM_RAINBOW_CYCLE:
+        if (elapsed_time > anim->delay) {
+            // Calculate Wheel index based on the current LED index and the total number of LEDs
+            uint8_t wheel_pos = (anim->led_index * 256 / anim->neopixel->led_count) % 256;
+            
+            // Get color using the corrected wheel position
+            uint32_t color = Wheel(wheel_pos);
+            NEO_ANIM_DBG_MSG("Rainbow Cycle: %d, 0x%X\r\n", anim->led_index, color);
+            
+            // Set the pixel color and update the neopixel
+            for (int i = 0; i < anim->neopixel->led_count; i++) {
+                neopixel_set_pixel_color_rgb(anim->neopixel, i, color);
+            }
+            neopixel_update(anim->neopixel);
+            
+            // Move to the next LED, wrapping around if needed
+            anim->led_index++;
+            if (anim->led_index >= anim->neopixel->led_count) {
+                anim->led_index = 0; // Reset index for continuous animation
+            }
+            
+            // Update the last update time
+            anim->last_update = current_time;
+        }
+        break;
 
 
     }

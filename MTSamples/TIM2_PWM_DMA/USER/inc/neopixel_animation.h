@@ -62,6 +62,7 @@ void neopixel_anim_update(neopixel_animation_t *anim);
 void neopixel_anim_fade_in(neopixel_animation_t *anim, uint32_t delay, uint32_t max_brightness);
 void neopixel_anim_blink(neopixel_animation_t *anim, uint32_t delay, uint32_t led_index);
 void neopixel_anim_rainbow(neopixel_animation_t *anim, uint32_t delay);
+void neopixel_anim_rainbow_cycle(neopixel_animation_t *anim, uint32_t delay);
 
 
 

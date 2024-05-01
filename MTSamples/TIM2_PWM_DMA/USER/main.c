@@ -82,7 +82,11 @@ int main(void)
     // neopixel_set_pixel_color(&neopixel, 0, 255, 0, 0);
     // neopixel_anim_fade_out(&anim, 100, 100);
 
-    neopixel_anim_rainbow(&anim, 500);
+    // neopixel_anim_rainbow(&anim, 500);
+
+    //neopixel_anim_rainbow_cycle(&anim, 500);
+
+
 
     // neopixel_set_pixel_color_rgb(&neopixel, 0, 0x00FF00); // Green
     // neopixel_update(&neopixel);
