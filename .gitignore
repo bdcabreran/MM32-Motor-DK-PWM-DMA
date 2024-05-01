@@ -1,6 +1,6 @@
 # Ignore Keil uVision specific files and directories
 # Keil project files
-*.uvprojx
+#*.uvprojx
 *.uvoptx
 *.uvmpw
 *.uvopt
