@@ -19,7 +19,7 @@ typedef void (*start_pwm_t)(uint8_t *, uint16_t);
 typedef void (*stop_pwm_t)(void);
 
 #define NEOPIXEL_BIT_PER_LED   24
-#define NEOPIXEL_LED_COUNT     10
+#define NEOPIXEL_LED_COUNT     25
 #define NEOPIXEL_BUFFER_SIZE   (NEOPIXEL_LED_COUNT * NEOPIXEL_BIT_PER_LED)
 #define NEOPIXEL_BACKUP_SIZE   (NEOPIXEL_LED_COUNT * 3)
 

@@ -84,7 +84,7 @@ int main(void)
 
     // neopixel_anim_rainbow(&anim, 500);
 
-    //neopixel_anim_rainbow_cycle(&anim, 100);
+    // neopixel_anim_rainbow_cycle(&anim, 50);
 
     // neopixel_anim_color_wipe(&anim, 100, 0xAABBCC);
 
@@ -92,11 +92,10 @@ int main(void)
 
     //neopixel_anim_theater_chase_rainbow(&anim, 100);
 
-
-
-
     // neopixel_set_pixel_color_rgb(&neopixel, 0, 0x00FF00); // Green
     // neopixel_update(&neopixel);
+
+    neopixel_anim_rainbow_water(&anim, 100);
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
 		
@@ -181,7 +180,7 @@ void print_msg(void)
     // DBG_MSG("TIM2 ARR: %d\r\n", READ_REG(TIM2->ARR));
     // DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
     // DBG_MSG("TIM Update Cnt: %d\r\n", TimUpdateCnt);
-    DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt_cnt);
+    // DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt_cnt);
   }
 }
 

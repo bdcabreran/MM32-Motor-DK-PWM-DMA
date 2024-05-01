@@ -25,6 +25,13 @@
 #define NEO_ANIM_DBG_MSG(fmt, ...) do { } while(0)
 #endif
 
+
+const uint8_t rainbow_colors[12][3] = {
+    {0x00, 0xFF, 0x00}, {0x21, 0xDE, 0x00}, {0x42, 0xBD, 0x00}, {0x63, 0x9C, 0x00},
+    {0x84, 0x7B, 0x00}, {0xA5, 0x5A, 0x00}, {0xC6, 0x39, 0x00}, {0xE7, 0x18, 0x00},
+    {0xF3, 0x00, 0x0C}, {0xD2, 0x00, 0x2D}, {0xB1, 0x00, 0x4E}, {0x90, 0x00, 0x6F}
+};
+
 // Private functions
 uint32_t Wheel(uint8_t WheelPos);
 uint32_t RGB(uint8_t r, uint8_t g, uint8_t b);
@@ -38,25 +45,14 @@ void neopixel_anim_init(neopixel_animation_t *anim, neopixel_t *neopixel)
     anim->neopixel = neopixel;
     anim->state = ANIM_IDLE;
     anim->led_index = 0;
-    anim->red = 0;
-    anim->green = 0;
-    anim->blue = 0;
     anim->brightness = 100;
     anim->color = 0;
     anim->delay = 0;
     anim->last_update = 0;
-    anim->last_cycle = 0;
-    anim->last_blink = 0;
-    anim->last_chase = 0;
-    anim->last_wipe = 0;
-    anim->last_rainbow = 0;
-    anim->last_rainbow_cycle = 0;
-    anim->last_fade = 0;
     anim->fade_delay = 0;
     anim->fade_step = 0;
     anim->fade_max = 0;
     anim->fade_min = 0;
-    anim->fade_dir = 0;
 }
 
 void neopixel_anim_update(neopixel_animation_t *anim)
@@ -68,6 +64,14 @@ void neopixel_anim_update(neopixel_animation_t *anim)
     {
     case ANIM_IDLE:
         break;
+
+    case ANIM_SOLID: 
+        neopixel_set_pixel_color_rgb(anim->neopixel, anim->led_index, anim->color);
+        neopixel_update(anim->neopixel);
+        anim->last_update = current_time;
+        anim->state = ANIM_IDLE;
+        break;
+
     case ANIM_FADE_IN:
         if (elapsed_time > anim->fade_delay)
         {
@@ -82,6 +86,7 @@ void neopixel_anim_update(neopixel_animation_t *anim)
             anim->last_update = current_time;
         }
         break;
+
     case ANIM_FADE_OUT:
         if (elapsed_time > anim->fade_delay)
         {
@@ -96,6 +101,7 @@ void neopixel_anim_update(neopixel_animation_t *anim)
             anim->last_update = current_time;
         }
         break;
+        
     case ANIM_BLINK:
         if (elapsed_time > anim->delay)
         {
@@ -136,7 +142,7 @@ void neopixel_anim_update(neopixel_animation_t *anim)
             for (int i = 0; i < anim->neopixel->led_count; i++) {
                 // Calculate position on color wheel for each LED
                 uint8_t wheel_pos = ((i + anim->led_index) * 256 / anim->neopixel->led_count) % 256;
-                
+
                 // Get the color and apply it to each LED
                 uint32_t color = Wheel(wheel_pos);
                 
@@ -242,10 +248,39 @@ void neopixel_anim_update(neopixel_animation_t *anim)
             anim->last_update = current_time;
         }
         break;
-    }
+
+    case ANIM_RAINBOW_WATERFALL:
+        if (elapsed_time > anim->delay) {
+            // Increment index to create the flowing effect
+            anim->led_index = (anim->led_index + 1) % 12;
+
+            // Set each LED using the colors from the rainbow array
+            for (int i = 0; i < anim->neopixel->led_count; i++) {
+                // Determine the rainbow color index
+                int color_index = (i + anim->led_index) % 12;
+
+                // Extract the RGB values from the array
+                uint32_t color = ((uint32_t)rainbow_colors[color_index][0] << 16) |
+                                ((uint32_t)rainbow_colors[color_index][1] << 8) |
+                                (uint32_t)rainbow_colors[color_index][2];
+
+                // Set the LED's color
+                neopixel_set_pixel_color_rgb(anim->neopixel, i, color);
+            }
+
+            // Update the LED strip
+            neopixel_update(anim->neopixel);
+
+            // Update the last update time
+            anim->last_update = current_time;
+        }
+        break;
 
 
     
+    }
+    
+   
 }
 
 void neopixel_anim_fade_in(neopixel_animation_t *anim, uint32_t delay, uint32_t max_brightness)
@@ -311,6 +346,14 @@ void neopixel_anim_theater_chase(neopixel_animation_t *anim, uint32_t delay, uin
 void neopixel_anim_theater_chase_rainbow(neopixel_animation_t *anim, uint32_t delay)
 {
     anim->state = ANIM_THEATER_CHASE_RAINBOW;
+    anim->delay = delay;
+    anim->led_index = 0;
+    anim->last_update = Get_Systick_Cnt();
+}
+
+void neopixel_anim_rainbow_water(neopixel_animation_t *anim, uint32_t delay)
+{
+    anim->state = ANIM_RAINBOW_WATERFALL;
     anim->delay = delay;
     anim->led_index = 0;
     anim->last_update = Get_Systick_Cnt();

@@ -19,6 +19,7 @@
 typedef enum
 {
     ANIM_IDLE,
+    ANIM_SOLID,
     ANIM_FADE_IN,
     ANIM_FADE_OUT,
     ANIM_BLINK,
@@ -27,6 +28,7 @@ typedef enum
     ANIM_COLOR_WIPE,
     ANIM_THEATER_CHASE,
     ANIM_THEATER_CHASE_RAINBOW,
+    ANIM_RAINBOW_WATERFALL,
     ANIM_MAX
 } anim_state_t;
 
@@ -36,25 +38,14 @@ typedef struct neopixel_animation
     neopixel_t *neopixel;
     anim_state_t state;
     uint8_t led_index;
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
     uint8_t brightness;
     uint32_t color;
     uint32_t delay;
     uint32_t last_update;
-    uint32_t last_cycle;
-    uint32_t last_blink;
-    uint32_t last_chase;
-    uint32_t last_wipe;
-    uint32_t last_rainbow;
-    uint32_t last_rainbow_cycle;
-    uint32_t last_fade;
     uint32_t fade_delay;
     uint32_t fade_step;
     uint32_t fade_max;
     uint32_t fade_min;
-    uint32_t fade_dir;
 } neopixel_animation_t;
 
 void neopixel_anim_init(neopixel_animation_t *anim, neopixel_t *neopixel);
@@ -66,6 +57,7 @@ void neopixel_anim_rainbow_cycle(neopixel_animation_t *anim, uint32_t delay);
 void neopixel_anim_color_wipe(neopixel_animation_t *anim, uint32_t delay, uint32_t color);
 void neopixel_anim_theater_chase(neopixel_animation_t *anim, uint32_t delay, uint32_t color);
 void neopixel_anim_theater_chase_rainbow(neopixel_animation_t *anim, uint32_t delay);
+void neopixel_anim_rainbow_water(neopixel_animation_t *anim, uint32_t delay);
 
 
 
