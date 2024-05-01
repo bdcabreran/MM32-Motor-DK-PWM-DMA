@@ -95,7 +95,9 @@ int main(void)
     // neopixel_set_pixel_color_rgb(&neopixel, 0, 0x00FF00); // Green
     // neopixel_update(&neopixel);
 
-    neopixel_anim_rainbow_water(&anim, 100);
+    // neopixel_anim_rainbow_water(&anim, 100);
+
+    neopixel_anim_solid(&anim, 0x00FF00); // Green
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
 		
@@ -103,7 +105,7 @@ int main(void)
     {
       blink_led();
       print_msg();
-      //send_pwm();
+      send_pwm();
       neopixel_anim_update(&anim);
     }
 }
@@ -187,7 +189,7 @@ void print_msg(void)
 void send_pwm(void)
 {
   static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 500)
+  if (Get_Systick_Cnt() - last_tick > 5000)
   {
     last_tick = Get_Systick_Cnt();
 
@@ -216,6 +218,8 @@ void send_pwm(void)
     uint8_t green = 0;
     uint8_t red = 0;
     uint8_t blue = 0;
+
+    neopixel_anim_close(&anim, 100);
 
     //neopixel_set_pixel_color(&neopixel, 5, 255, 0, 0);
     // neopixel_set_pixel_color_rgb(&neopixel, 6, 0x00FF00); // Green

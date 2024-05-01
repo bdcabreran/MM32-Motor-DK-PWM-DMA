@@ -65,8 +65,10 @@ void neopixel_anim_update(neopixel_animation_t *anim)
     case ANIM_IDLE:
         break;
 
-    case ANIM_SOLID: 
-        neopixel_set_pixel_color_rgb(anim->neopixel, anim->led_index, anim->color);
+    case ANIM_SOLID:
+        for (int i = 0; i < anim->neopixel->led_count; i++) {
+            neopixel_set_pixel_color_rgb(anim->neopixel, i, anim->color);
+        } 
         neopixel_update(anim->neopixel);
         anim->last_update = current_time;
         anim->state = ANIM_IDLE;
@@ -276,6 +278,44 @@ void neopixel_anim_update(neopixel_animation_t *anim)
         }
         break;
 
+    case ANIM_CLOSE:
+        if (elapsed_time > anim->delay) {
+            // Calculate the middle of the strip, adjusted for two-step closing
+            int middle = (anim->neopixel->led_count + 1) / 2;
+
+            // Turn off LEDs from the edges towards the middle in pairs
+            for (int i = 0; i <= anim->led_index; i++) {
+                int left = i; // LED index from the left edge
+                int right = anim->neopixel->led_count - i - 1; // LED index from the right edge
+
+                // Turn off LED from the left edge, only if within bounds
+                if (left < anim->neopixel->led_count) {
+                    neopixel_set_pixel_color_rgb(anim->neopixel, left, 0x000000);
+                }
+
+                // Turn off LED from the right edge, only if within bounds and not overlapping
+                if (right >= 0 && right != left) {
+                    neopixel_set_pixel_color_rgb(anim->neopixel, right, 0x000000);
+                }
+            }
+
+            // Update the LED strip
+            neopixel_update(anim->neopixel);
+
+            // Move to the next step of closing
+            anim->led_index++;
+
+            // Stop animation when fully closed
+            if (anim->led_index >= middle) {
+                anim->led_index = 0;
+                anim->state = ANIM_IDLE;
+            }
+
+            // Update the last update time
+            anim->last_update = current_time;
+        }
+        break;
+
 
     
     }
@@ -358,6 +398,21 @@ void neopixel_anim_rainbow_water(neopixel_animation_t *anim, uint32_t delay)
     anim->led_index = 0;
     anim->last_update = Get_Systick_Cnt();
 }
+
+void neopixel_anim_close(neopixel_animation_t *anim, uint32_t delay)
+{
+    anim->state = ANIM_CLOSE;
+    anim->delay = delay;
+    anim->led_index = 0;
+    anim->last_update = Get_Systick_Cnt();
+}
+
+void neopixel_anim_solid(neopixel_animation_t *anim, uint32_t color)
+{
+    anim->state = ANIM_SOLID;
+    anim->color = color;
+    anim->last_update = Get_Systick_Cnt();
+}   
 
 uint32_t Wheel(uint8_t WheelPos) {
     if (WheelPos < 85) {

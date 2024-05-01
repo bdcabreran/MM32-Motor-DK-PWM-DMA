@@ -29,6 +29,7 @@ typedef enum
     ANIM_THEATER_CHASE,
     ANIM_THEATER_CHASE_RAINBOW,
     ANIM_RAINBOW_WATERFALL,
+    ANIM_CLOSE,
     ANIM_MAX
 } anim_state_t;
 
@@ -58,6 +59,8 @@ void neopixel_anim_color_wipe(neopixel_animation_t *anim, uint32_t delay, uint32
 void neopixel_anim_theater_chase(neopixel_animation_t *anim, uint32_t delay, uint32_t color);
 void neopixel_anim_theater_chase_rainbow(neopixel_animation_t *anim, uint32_t delay);
 void neopixel_anim_rainbow_water(neopixel_animation_t *anim, uint32_t delay);
+void neopixel_anim_close(neopixel_animation_t *anim, uint32_t delay);
+void neopixel_anim_solid(neopixel_animation_t *anim, uint32_t color);
 
 
 
