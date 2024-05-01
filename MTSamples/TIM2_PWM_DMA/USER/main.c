@@ -45,7 +45,7 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 #define DBG_MSG(fmt, ...) do { } while(0)
 #endif
 
-#define DATA_LEN  (24*3)
+#define DATA_LEN  (24)
 u8 data[DATA_LEN] = {0};
 
 #define WS2812_BIT_PER_LED  (DATA_LEN)
@@ -342,8 +342,8 @@ void send_pwm(void)
 
     //memset(data, 0, DATA_LEN);
     set_pixel_color(0, red, 255, blue, data);
-    set_pixel_color(1, 255, green, blue, data);
-    set_pixel_color(2, red, green, 255, data);
+    // set_pixel_color(1, 255, green, blue, data);
+    // set_pixel_color(2, red, green, 255, data);
 
     exDMA_SetMemoryAddress(DMA1_Channel1, (uint32_t)data); // Set the memory address
     exDMA_SetTransmitLen(DMA1_Channel1, DATA_LEN); // Set the transmit length

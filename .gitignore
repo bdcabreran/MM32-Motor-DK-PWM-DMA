@@ -40,8 +40,8 @@
 *.exe
 
 # Ignore user-specific Keil uVision settings
-*.uvoptx.user
-*.uvprojx.user
+#*.uvoptx.user
+#*.uvprojx.user
 
 # Ignore generated files
 Debug/
