@@ -565,14 +565,19 @@
               <FilePath>..\USER\main.c</FilePath>
             </File>
             <File>
-              <FileName>ws2812.c</FileName>
+              <FileName>neopixel.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\USER\ws2812.c</FilePath>
+              <FilePath>..\USER\neopixel.c</FilePath>
             </File>
             <File>
               <FileName>pwm_dma.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\USER\pwm_dma.c</FilePath>
+            </File>
+            <File>
+              <FileName>neopixel_animation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\neopixel_animation.c</FilePath>
             </File>
           </Files>
         </Group>

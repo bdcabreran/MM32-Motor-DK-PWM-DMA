@@ -29,6 +29,7 @@
 #include "drv_led.h"
 #include "drv_uart.h"
 #include "pwm_dma.h"
+#include "neopixel.h"
 
 #define DEBUG_BUFFER_SIZE 256
 char debugBuffer[DEBUG_BUFFER_SIZE];
@@ -47,8 +48,7 @@ char debugBuffer[DEBUG_BUFFER_SIZE];
 
 
 #define NUM_LEDS 10
-#define WS2812_BIT_PER_LED 24
-#define DATA_LEN  (WS2812_BIT_PER_LED*NUM_LEDS)
+#define DATA_LEN  (NEOPIXEL_BIT_PER_LED*NUM_LEDS)
 u8 data[DATA_LEN] = {0};
 
 
@@ -62,14 +62,7 @@ void updateLEDColor(int led_num);
 extern uint32_t SystemCoreClock;
 volatile uint32_t TimUpdateCnt = 0;
 volatile uint8_t dma_transfer_cplt_cnt = 0;
-
-
-// frequency = 800000Hz
-// SysFreq = 96000000Hz
-// arr = (SysFreq / frequency) - 1 = 119
-// PWM_Mode = 1
-#define PWM_HIGH_0 34
-#define PWM_HIGH_1 67
+neopixel_t neopixel;
 
 
 int main(void)
@@ -81,11 +74,9 @@ int main(void)
 
     DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
     PWM_DMA_Init();
+
+    neopixel_init(&neopixel, data, DATA_LEN, PWM_DMA_Start, PWM_DMA_Stop);
     
-    for (size_t i = 0; i < DATA_LEN; i++)
-    {
-      data[i] = PWM_HIGH_0;
-    }
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
 		
@@ -100,7 +91,7 @@ int main(void)
 void TransferComplete_Callback()
 {
   dma_transfer_cplt_cnt++;
-  PWM_DMA_Stop();
+  neopixel.stop_dma();
 }
 
 void DMA1_Channel1_IRQHandler(void) {
@@ -206,93 +197,50 @@ void send_pwm(void)
     uint8_t red = 0;
     uint8_t blue = 0;
 
-    //memset(data, 0, DATA_LEN);
-    //uint8_t my_value = 0x01<<7 | 0x01<<0;
-    //set_pixel_color(0, my_value, my_value, my_value, data);
-    // set_pixel_color(1, 255, green, blue, data);
-    // set_pixel_color(2, red, green, 255, data);
-
-  //  for (int i = 0; i < NUM_LEDS; i++) {
-  //     updateLEDColor(i);
-  //   }
-
-    set_pixel_color(0, 255, 255, 255, data);
-    set_pixel_color(1, 0, 255, 255, data);
-    set_pixel_color(2, 255, 255, 0, data);
-    set_pixel_color(3, 255, 0, 255, data);
-
-    PWM_DMA_Start(data, DATA_LEN);
+    neopixel_set_pixel_color(&neopixel, 5, 255, 0, 0);
+    // neopixel_set_pixel_color_rgb(&neopixel, 6, 0x00FF00); // Green
+    neopixel_update(&neopixel);
 
     DBG_MSG("dma_transfer_cplt_cnt: %d\r\n",dma_transfer_cplt_cnt);
   }
 }
 
+// void updateLEDColor(int led_num) {
+//     static uint8_t green = 0;
+//     static uint8_t red = 0;
+//     static uint8_t blue = 0;
+//     static int colorStage = 0;  // 0 = Green, 1 = Red, 2 = Blue
 
+//     //DBG_MSG("g: %d, r: %d, b: %d, cS: %d\r\n", green, red, blue, colorStage);
 
-// Function to set a single LED at a particular index
-void set_pixel_color(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue, uint8_t* led_data) {
-
-    uint32_t pos = led_index * WS2812_BIT_PER_LED;
-    uint8_t mask;
-    int i = 0;
-
-    // GREEN color
-    for (i = 0; i < 8; i++) {
-        mask = (green & (1 << (7 - i))) ? PWM_HIGH_1 : PWM_HIGH_0;
-        led_data[pos++] = mask;
-    }
-
-    // RED color
-    for (i = 0; i < 8; i++) {
-        mask = (red & (1 << (7 - i))) ? PWM_HIGH_1 : PWM_HIGH_0;
-        led_data[pos++] = mask;
-    }
-
-    // BLUE color
-    for (i = 0; i < 8; i++) {
-        mask = (blue & (1 << (7 - i))) ? PWM_HIGH_1 : PWM_HIGH_0;
-        led_data[pos++] = mask;
-    }
-
-}
-
-
-void updateLEDColor(int led_num) {
-    static uint8_t green = 0;
-    static uint8_t red = 0;
-    static uint8_t blue = 0;
-    static int colorStage = 0;  // 0 = Green, 1 = Red, 2 = Blue
-
-    //DBG_MSG("g: %d, r: %d, b: %d, cS: %d\r\n", green, red, blue, colorStage);
-
-    // Check which color to increment
-    switch (colorStage) {
-        case 0:  // Green cycle
-            if (green < 255) {
-                green++;
-                set_pixel_color(led_num, red, green, blue, data);
-            } else {
-                green = 0;
-                colorStage = 1;
-            }
-            break;
-        case 1:  // Red cycle
-            if (red < 255) {
-                red++;
-                set_pixel_color(led_num, red, green, blue, data);
-            } else {
-                red = 0;
-                colorStage = 2;
-            }
-            break;
-        case 2:  // Blue cycle
-            if (blue < 255) {
-                blue++;
-                set_pixel_color(led_num, red, green, blue, data);
-            } else {
-                blue = 0;
-                colorStage = 0;
-            }
-            break;
-    }
-}
+//     // Check which color to increment
+//     switch (colorStage) {
+//         case 0:  // Green cycle
+//             if (green < 255) {
+//                 green++;
+//                 set_pixel_color(led_num, red, green, blue, data);
+//             } else {
+//                 green = 0;
+//                 colorStage = 1;
+//             }
+//             break;
+//         case 1:  // Red cycle
+//             if (red < 255) {
+//                 red++;
+//                 set_pixel_color(led_num, red, green, blue, data);
+//             } else {
+//                 red = 0;
+//                 colorStage = 2;
+//             }
+//             break;
+//         case 2:  // Blue cycle
+//             if (blue < 255) {
+//                 blue++;
+//                 set_pixel_color(led_num, red, green, blue, data);
+//             } else {
+//                 blue = 0;
+//                 colorStage = 0;
+//             }
+//             break;
+//     }
+// }

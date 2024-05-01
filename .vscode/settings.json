@@ -10,6 +10,7 @@
         "pwm.h": "c",
         "mm32_device.h": "c",
         "drv_uart.h": "c",
-        "pwm_dma.h": "c"
+        "pwm_dma.h": "c",
+        "neopixel.h": "c"
     }
 }
