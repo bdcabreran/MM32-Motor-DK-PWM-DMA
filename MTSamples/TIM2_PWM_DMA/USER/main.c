@@ -84,7 +84,14 @@ int main(void)
 
     // neopixel_anim_rainbow(&anim, 500);
 
-    //neopixel_anim_rainbow_cycle(&anim, 500);
+    //neopixel_anim_rainbow_cycle(&anim, 100);
+
+    // neopixel_anim_color_wipe(&anim, 100, 0xAABBCC);
+
+    //neopixel_anim_theater_chase(&anim, 100, 0x00FF00);
+
+    //neopixel_anim_theater_chase_rainbow(&anim, 100);
+
 
 
 

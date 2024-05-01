@@ -28,6 +28,8 @@
 // Private functions
 uint32_t Wheel(uint8_t WheelPos);
 uint32_t RGB(uint8_t r, uint8_t g, uint8_t b);
+uint32_t NextColor(uint32_t current_color);
+
 
 void neopixel_anim_init(neopixel_animation_t *anim, neopixel_t *neopixel)
 {
@@ -104,7 +106,7 @@ void neopixel_anim_update(neopixel_animation_t *anim)
             anim->last_update = current_time;
         }
         break;
-        
+
     case ANIM_RAINBOW:
         if (elapsed_time > anim->delay) {
             // Calculate Wheel index based on the current LED index and the total number of LEDs
@@ -119,11 +121,8 @@ void neopixel_anim_update(neopixel_animation_t *anim)
             neopixel_update(anim->neopixel);
             
             // Move to the next LED, wrapping around if needed
-            anim->led_index++;
-            if (anim->led_index >= anim->neopixel->led_count) {
-                anim->led_index = 0; // Reset index for continuous animation
-            }
-            
+            anim->led_index = (anim->led_index + 1) % anim->neopixel->led_count;
+
             // Update the last update time
             anim->last_update = current_time;
         }
@@ -131,32 +130,122 @@ void neopixel_anim_update(neopixel_animation_t *anim)
 
     case ANIM_RAINBOW_CYCLE:
         if (elapsed_time > anim->delay) {
-            // Calculate Wheel index based on the current LED index and the total number of LEDs
-            uint8_t wheel_pos = (anim->led_index * 256 / anim->neopixel->led_count) % 256;
-            
-            // Get color using the corrected wheel position
-            uint32_t color = Wheel(wheel_pos);
-            NEO_ANIM_DBG_MSG("Rainbow Cycle: %d, 0x%X\r\n", anim->led_index, color);
-            
-            // Set the pixel color and update the neopixel
+            // Apply an offset based on time and calculate wheel position
+            anim->led_index = (anim->led_index + 1) % anim->neopixel->led_count;
+
             for (int i = 0; i < anim->neopixel->led_count; i++) {
+                // Calculate position on color wheel for each LED
+                uint8_t wheel_pos = ((i + anim->led_index) * 256 / anim->neopixel->led_count) % 256;
+                
+                // Get the color and apply it to each LED
+                uint32_t color = Wheel(wheel_pos);
+                
+                // Set each LED's color
                 neopixel_set_pixel_color_rgb(anim->neopixel, i, color);
             }
             neopixel_update(anim->neopixel);
-            
-            // Move to the next LED, wrapping around if needed
-            anim->led_index++;
-            if (anim->led_index >= anim->neopixel->led_count) {
-                anim->led_index = 0; // Reset index for continuous animation
-            }
             
             // Update the last update time
             anim->last_update = current_time;
         }
         break;
+    
+    case ANIM_COLOR_WIPE:
+        if (elapsed_time > anim->delay) {
+        // Determine the current color to set for the wipe animation
+        uint32_t wipe_color = anim->color;
 
+        // Set the color for the current LED index
+        neopixel_set_pixel_color_rgb(anim->neopixel, anim->led_index, wipe_color);
 
+        // Update the LED strip
+        neopixel_update(anim->neopixel);
+
+        // Move to the next LED
+        anim->led_index++;
+
+        // Reset the index after wiping through all the LEDs
+        if (anim->led_index >= anim->neopixel->led_count) {
+            anim->led_index = 0;
+
+            // Optionally, change the wipe color after a complete pass
+            anim->color = NextColor(anim->color); 
+        }
+
+        // Update the last update time
+        anim->last_update = current_time;
+        }
+        break;
+
+    case ANIM_THEATER_CHASE:
+        if (elapsed_time > anim->delay) {
+            // Set up two colors for the chase effect
+            uint32_t on_color = anim->color;  // Color of the "on" lights
+            uint32_t off_color = 0x000000;    // Color of the "off" lights
+
+            // Set each LED in a chase pattern
+            for (int i = 0; i < anim->neopixel->led_count; i++) {
+                // Use modulo arithmetic to alternate the on/off pattern
+                if ((i + anim->led_index) % 3 == 0) {
+                    neopixel_set_pixel_color_rgb(anim->neopixel, i, on_color);
+                } else {
+                    neopixel_set_pixel_color_rgb(anim->neopixel, i, off_color);
+                }
+            }
+            neopixel_update(anim->neopixel);
+
+            // Move to the next chase position, wrapping around if needed
+            anim->led_index = (anim->led_index + 1) % 3;
+
+            // Optionally, change the chase color after a complete cycle
+            if (anim->led_index == 0) {
+                anim->color = NextColor(anim->color);
+            }
+
+            // Update the last update time
+            anim->last_update = current_time;
+        }
+        break;
+
+    case ANIM_THEATER_CHASE_RAINBOW:
+        if (elapsed_time > anim->delay)
+        {
+            // Calculate the chase position
+            anim->led_index = (anim->led_index + 1) % 3;
+
+            // Set each LED in a chase pattern with a rainbow effect
+            for (int i = 0; i < anim->neopixel->led_count; i++)
+            {
+                // Calculate the position in the rainbow for each LED
+                uint8_t wheel_pos = ((i * 256 / anim->neopixel->led_count) + anim->led_index * 10) % 256;
+
+                // Generate the rainbow color
+                uint32_t rainbow_color = Wheel(wheel_pos);
+
+                // Use modulo arithmetic to alternate the on/off pattern
+                if ((i + anim->led_index) % 3 == 0)
+                {
+                    // "On" LED in rainbow color
+                    neopixel_set_pixel_color_rgb(anim->neopixel, i, rainbow_color);
+                }
+                else
+                {
+                    // "Off" LED
+                    neopixel_set_pixel_color_rgb(anim->neopixel, i, 0x000000);
+                }
+            }
+
+            // Update the LED strip
+            neopixel_update(anim->neopixel);
+
+            // Update the last update time
+            anim->last_update = current_time;
+        }
+        break;
     }
+
+
+    
 }
 
 void neopixel_anim_fade_in(neopixel_animation_t *anim, uint32_t delay, uint32_t max_brightness)
@@ -242,11 +331,24 @@ uint32_t Wheel(uint8_t WheelPos) {
     }
 }
 
-
-
 uint32_t RGB(uint8_t r, uint8_t g, uint8_t b)
 {
     return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
 }
 
+uint32_t NextColor(uint32_t current_color) {
+    switch (current_color) {
+        // Cycles through the following colors:
+        case 0xFF0000: return 0x00FF00; // Red to Green
+        case 0x00FF00: return 0x0000FF; // Green to Blue
+        case 0x0000FF: return 0xFFFF00; // Blue to Yellow
+        case 0xFFFF00: return 0x00FFFF; // Yellow to Cyan
+        case 0x00FFFF: return 0xFF00FF; // Cyan to Magenta
+        case 0xFF00FF: return 0xFFFFFF; // Magenta to White
+        case 0xFFFFFF: return 0xFF0000; // White to Red
+
+        // Default color (Red)
+        default: return 0xFF0000; // Default back to Red
+    }
+}
 

@@ -71,7 +71,7 @@ void neopixel_set_pixel_color(neopixel_t *neopixel, uint8_t led_index, uint8_t r
     uint8_t mask;
     int i = 0;
 
-    NEOPIXEL_DBG_MSG("led: %d, r: %d, g: %d, b: %d\r\n", led_index, red, green, blue);
+    //NEOPIXEL_DBG_MSG("led: %d, r: %d, g: %d, b: %d\r\n", led_index, red, green, blue);
 
 
     for (i = 0; i < 8; i++) {

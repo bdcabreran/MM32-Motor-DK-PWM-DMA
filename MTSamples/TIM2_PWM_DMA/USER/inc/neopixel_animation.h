@@ -63,6 +63,9 @@ void neopixel_anim_fade_in(neopixel_animation_t *anim, uint32_t delay, uint32_t 
 void neopixel_anim_blink(neopixel_animation_t *anim, uint32_t delay, uint32_t led_index);
 void neopixel_anim_rainbow(neopixel_animation_t *anim, uint32_t delay);
 void neopixel_anim_rainbow_cycle(neopixel_animation_t *anim, uint32_t delay);
+void neopixel_anim_color_wipe(neopixel_animation_t *anim, uint32_t delay, uint32_t color);
+void neopixel_anim_theater_chase(neopixel_animation_t *anim, uint32_t delay, uint32_t color);
+void neopixel_anim_theater_chase_rainbow(neopixel_animation_t *anim, uint32_t delay);
 
 
 
