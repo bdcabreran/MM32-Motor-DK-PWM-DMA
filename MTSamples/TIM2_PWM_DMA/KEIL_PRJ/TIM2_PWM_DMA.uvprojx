@@ -570,9 +570,9 @@
               <FilePath>..\USER\ws2812.c</FilePath>
             </File>
             <File>
-              <FileName>pwm.c</FileName>
+              <FileName>pwm_dma.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\USER\pwm.c</FilePath>
+              <FilePath>..\USER\pwm_dma.c</FilePath>
             </File>
           </Files>
         </Group>
