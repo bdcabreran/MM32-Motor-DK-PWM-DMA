@@ -167,7 +167,6 @@ void blink_led(void)
     GPIO_WriteBit(LED1_PORT, LED1_PIN, led_state);
     led_state = (led_state == Bit_SET) ? Bit_RESET : Bit_SET;
     last_tick = Get_Systick_Cnt();
-    // DBG_MSG("Blink\r\n");
   }
 }
 
@@ -193,95 +192,7 @@ void send_pwm(void)
   {
     last_tick = Get_Systick_Cnt();
 
-    #if 0
-    static uint8_t counter = 0;
-    uint8_t red = 0;
-    uint8_t green = 0;
-    uint8_t blue = 0;
-
-    switch (counter % 3) {
-      case 0:
-        red = 255;
-        break;
-      case 1:
-        green = 255;
-        break;
-      case 2:
-        blue = 255;
-        break;
-    }
-    counter++;
-    set_pixel_color(0, red, green, blue, data);
-    #endif 
-
-    // GRB
-    uint8_t green = 0;
-    uint8_t red = 0;
-    uint8_t blue = 0;
-
+    // Send the command after 5 seconds
     neopixel_anim_close(&anim, 100);
-
-    //neopixel_set_pixel_color(&neopixel, 5, 255, 0, 0);
-    // neopixel_set_pixel_color_rgb(&neopixel, 6, 0x00FF00); // Green
-    //neopixel_update(&neopixel);
-
-    // static uint8_t brightness = 100;
-
-    // if (brightness > 0) {
-    //   brightness--;
-    // } else {
-    //   brightness = 100;
-    // }
-
-    // neopixel_set_brightness(&neopixel, brightness);
-    // neopixel_update(&neopixel);
-    // DBG_MSG("brightness: %d\r\n", brightness);
-
-
-    //neopixel_set_pixel_color_rgb(&neopixel, 0, 0x00FFFF); // Green
-    //neopixel_update(&neopixel);
-
-
-    //DBG_MSG("dma_transfer_cplt_cnt: %d\r\n",dma_transfer_cplt_cnt);
   }
 }
-
-// void updateLEDColor(int led_num) {
-//     static uint8_t green = 0;
-//     static uint8_t red = 0;
-//     static uint8_t blue = 0;
-//     static int colorStage = 0;  // 0 = Green, 1 = Red, 2 = Blue
-
-//     //DBG_MSG("g: %d, r: %d, b: %d, cS: %d\r\n", green, red, blue, colorStage);
-
-//     // Check which color to increment
-//     switch (colorStage) {
-//         case 0:  // Green cycle
-//             if (green < 255) {
-//                 green++;
-//                 set_pixel_color(led_num, red, green, blue, data);
-//             } else {
-//                 green = 0;
-//                 colorStage = 1;
-//             }
-//             break;
-//         case 1:  // Red cycle
-//             if (red < 255) {
-//                 red++;
-//                 set_pixel_color(led_num, red, green, blue, data);
-//             } else {
-//                 red = 0;
-//                 colorStage = 2;
-//             }
-//             break;
-//         case 2:  // Blue cycle
-//             if (blue < 255) {
-//                 blue++;
-//                 set_pixel_color(led_num, red, green, blue, data);
-//             } else {
-//                 blue = 0;
-//                 colorStage = 0;
-//             }
-//             break;
-//     }
-// }
