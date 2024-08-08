@@ -167,28 +167,30 @@ int main(void)
 
     LED_RGYW_TIM_Init();
 
-    // PD_Initialise();
+    PD_Initialise();
     
-    // // LED Complete Callback is optional and can be used to trigger other events when LED animations are complete.
-    LED_Animation_Init(&MainLED, &LED_Controller, LED_Complete_Callback);
-    LED_Transition_Init(&LEDTransition, &MainLED);
+    // // // LED Complete Callback is optional and can be used to trigger other events when LED animations are complete.
+    // LED_Animation_Init(&MainLED, &LED_Controller, LED_Complete_Callback);
+    // LED_Transition_Init(&LEDTransition, &MainLED);
 
-    // This Mapping is optional and can be used to map the LED transitions to the LED animations.
-    LED_Transition_SetMapping(&LEDTransition, LEDTransitionMap, LED_TRANSITION_MAP_SIZE);
+    // // This Mapping is optional and can be used to map the LED transitions to the LED animations.
+    // LED_Transition_SetMapping(&LEDTransition, LEDTransitionMap, LED_TRANSITION_MAP_SIZE);
 
-    LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, 300);
+    // LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, 300);
 
     DBG_MSG("I'm Alive\r\n");
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
+
+    PD_BtnPwr_OnShortButtonPress();
 		
     while(1)
     {
 
       if (Get_Systick_Cnt() != last_tick)
       {
-        LED_Transition_Update(&LEDTransition, Get_Systick_Cnt());
-        // PD_RunProductControlTasks();
+        // LED_Transition_Update(&LEDTransition, Get_Systick_Cnt());
+        PD_RunProductControlTasks();
 
         last_tick = Get_Systick_Cnt();
       }
