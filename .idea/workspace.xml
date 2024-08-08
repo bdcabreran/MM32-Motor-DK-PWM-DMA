@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="05919adb-2915-4583-a7d0-4efb11a23bca" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/Device/system_mm32spin028x.c" beforeDir="false" afterPath="$PROJECT_DIR$/Device/system_mm32spin028x.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/KEIL_PRJ/JLinkLog.txt" beforeDir="false" afterPath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/KEIL_PRJ/JLinkLog.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/KEIL_PRJ/Listings/MM32SPIN3280.map" beforeDir="false" afterPath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/KEIL_PRJ/Listings/MM32SPIN3280.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/KEIL_PRJ/Objects/MM32SPIN3280.hex" beforeDir="false" afterPath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/KEIL_PRJ/Objects/MM32SPIN3280.hex" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/USER/inc/neopixel.h" beforeDir="false" afterPath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/USER/inc/neopixel.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/USER/inc/pwm_dma.h" beforeDir="false" afterPath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/USER/inc/pwm_dma.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/USER/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/MTSamples/TIM2_PWM_DMA/USER/main.c" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2kKvKXfGWoKA0GVmQ0oe7ARltcm" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="05919adb-2915-4583-a7d0-4efb11a23bca" name="Changes" comment="" />
+      <created>1723045021464</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1723045021464</updated>
+    </task>
+    <servers />
+  </component>
+</project>

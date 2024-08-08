@@ -19,17 +19,17 @@ typedef void (*start_pwm_t)(uint8_t *, uint16_t);
 typedef void (*stop_pwm_t)(void);
 
 #define NEOPIXEL_BIT_PER_LED   24
-#define NEOPIXEL_LED_COUNT     25
+#define NEOPIXEL_LED_COUNT     10
 #define NEOPIXEL_BUFFER_SIZE   (NEOPIXEL_LED_COUNT * NEOPIXEL_BIT_PER_LED)
 #define NEOPIXEL_BACKUP_SIZE   (NEOPIXEL_LED_COUNT * 3)
 
 // frequency = 650000Hz
-// SystemCoreClock = 96000000Hz
-// PWM Period:ARR = (SystemCoreClock / frequency) - 1 = 147
+// SystemCoreClock = 48000000Hz
+// PWM Period:ARR = (SystemCoreClock / frequency) - 1 = 73
 
 // Adjust the values of PWM_HIGH_0 and PWM_HIGH_1 to match the timing of the neopixel LEDs
-#define PWM_HIGH_0 34  // 354.28 ns
-#define PWM_HIGH_1 67  // 698.14 ns
+#define PWM_HIGH_0 17  // 354.28 ns
+#define PWM_HIGH_1 33  // 698.14 ns
 
 typedef struct {
     uint8_t led_data[NEOPIXEL_BUFFER_SIZE];    // Pointer to the PWM data buffer

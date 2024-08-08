@@ -22,9 +22,9 @@
 #include "hal_misc.h"
 
 extern uint32_t SystemCoreClock;
-#define TIMER_FREQUENCY     SystemCoreClock // 96 MHz
+#define TIMER_FREQUENCY     SystemCoreClock/2 // 48 MHz
 #define PWM_TIMER_FREQUENCY 650000U // 650 kHz
-#define PWM_TIMER_PERIOD    (TIMER_FREQUENCY / PWM_TIMER_FREQUENCY) - 1
+#define PWM_TIMER_PERIOD    (TIMER_FREQUENCY / PWM_TIMER_FREQUENCY) - 1 // 73
 #define PWM_TIMER_PRESCALER 0
 
 

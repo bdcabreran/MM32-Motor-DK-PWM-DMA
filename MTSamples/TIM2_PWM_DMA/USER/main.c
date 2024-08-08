@@ -31,6 +31,7 @@
 #include "pwm_dma.h"
 #include "neopixel.h"
 #include "neopixel_animation.h"
+#include "bsp_led_pwm.h"
 
 #define DEBUG_BUFFER_SIZE 256
 char debugBuffer[DEBUG_BUFFER_SIZE];
@@ -60,6 +61,34 @@ volatile uint8_t dma_transfer_cplt_cnt = 0;
 neopixel_t neopixel;
 neopixel_animation_t anim;
 
+void print_prescaler_values() {
+    // Access RCC register to read APB1 prescaler
+    uint32_t apb1_prescaler = RCC->CFGR & RCC_CFGR_PPRE1; // Assuming APB1 is configured using bits RCC_CFGR_PPRE
+
+    // Determine prescaler value
+    uint32_t prescaler_value = 1; // Default value
+    switch(apb1_prescaler) {
+        case RCC_CFGR_PPRE1_DIV1:
+            prescaler_value = 1;
+            break;
+        case RCC_CFGR_PPRE1_DIV2:
+            prescaler_value = 2;
+            break;
+        case RCC_CFGR_PPRE1_DIV4:
+            prescaler_value = 4;
+            break;
+        case RCC_CFGR_PPRE1_DIV8:
+            prescaler_value = 8;
+            break;
+        case RCC_CFGR_PPRE1_DIV16:
+            prescaler_value = 16;
+            break;
+    }
+
+    // Print the prescaler value
+    // Example: Assuming UART for output
+    DBG_MSG("APB1 Prescaler Value: %u\r\n", prescaler_value);
+}
 
 int main(void)
 {
@@ -69,10 +98,29 @@ int main(void)
     Board_Gpio_Init();
 
     DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
-    PWM_DMA_Init();
+    // PWM_DMA_Init();
 
-    neopixel_init(&neopixel, PWM_DMA_Start, PWM_DMA_Stop);
-    neopixel_anim_init(&anim, &neopixel);    
+    DBG_MSG("RCC_GetHCLKFreq: %d Hz\r\n", RCC_GetHCLKFreq());
+    DBG_MSG("RCC_GetPCLK1Freq: %d Hz\r\n", RCC_GetPCLK1Freq());
+    DBG_MSG("RCC_GetPCLK2Freq: %d Hz\r\n", RCC_GetPCLK2Freq());
+   print_prescaler_values();
+
+    LED_RGYW_TIM_Init();
+
+    LED_PWM_Start();
+
+    // LED_RGYW_RED_ON;
+    // LED_RGYW_GREEN_ON;
+    // LED_RGYW_YELLOW_ON;
+
+    //  LED_SetPWM_Red(1000);
+    // LED_SetPWM_Green(1000);
+    // LED_SetPWM_Yellow(1000);
+    
+
+
+    // neopixel_init(&neopixel, PWM_DMA_Start, PWM_DMA_Stop);
+    // neopixel_anim_init(&anim, &neopixel);    
     
     //neopixel_anim_blink(&anim, 100, 0);
 
@@ -97,7 +145,9 @@ int main(void)
 
     // neopixel_anim_rainbow_water(&anim, 100);
 
-    neopixel_anim_solid(&anim, 0x00FF00); // Green
+    // neopixel_anim_solid(&anim, 0x00FF00); // Green
+
+    DBG_MSG("Alive\r\n");
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
 		
@@ -105,8 +155,8 @@ int main(void)
     {
       blink_led();
       print_msg();
-      send_pwm();
-      neopixel_anim_update(&anim);
+      // send_pwm();
+      // neopixel_anim_update(&anim);
     }
 }
 
@@ -174,9 +224,16 @@ void blink_led(void)
 void print_msg(void)
 {
   static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 1000)
+  static uint16_t redCycle = 0;
+  if (Get_Systick_Cnt() - last_tick > 20)
   {
     last_tick = Get_Systick_Cnt();
+    redCycle = (redCycle + 1) % 1000;
+    LED_SetPWM_Red(redCycle);
+
+
+    // DBG_MSG("LED PWM Off\r\n");
+    // LED_PWM_Stop();
     // DBG_MSG("TIM2 CNT: %d\r\n", READ_REG(TIM2->CNT));
     // DBG_MSG("TIM2 ARR: %d\r\n", READ_REG(TIM2->ARR));
     // DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
@@ -188,11 +245,12 @@ void print_msg(void)
 void send_pwm(void)
 {
   static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 5000)
+  if (Get_Systick_Cnt() - last_tick > 1000)
   {
     last_tick = Get_Systick_Cnt();
 
     // Send the command after 5 seconds
-    neopixel_anim_close(&anim, 100);
+    // neopixel_anim_close(&anim, 100);
+		neopixel_anim_solid(&anim, 0x00FF00); 
   }
 }
