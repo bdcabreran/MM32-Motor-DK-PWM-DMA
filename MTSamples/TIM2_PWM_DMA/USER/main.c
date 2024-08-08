@@ -109,44 +109,6 @@ int main(void)
 
     LED_PWM_Start();
 
-    // LED_RGYW_RED_ON;
-    // LED_RGYW_GREEN_ON;
-    // LED_RGYW_YELLOW_ON;
-
-    //  LED_SetPWM_Red(1000);
-    // LED_SetPWM_Green(1000);
-    // LED_SetPWM_Yellow(1000);
-    
-
-
-    // neopixel_init(&neopixel, PWM_DMA_Start, PWM_DMA_Stop);
-    // neopixel_anim_init(&anim, &neopixel);    
-    
-    //neopixel_anim_blink(&anim, 100, 0);
-
-    // neopixel_set_pixel_color(&neopixel, 0, 255, 0, 0);
-    // neopixel_anim_fade_in(&anim, 100, 100);
-
-    // neopixel_set_pixel_color(&neopixel, 0, 255, 0, 0);
-    // neopixel_anim_fade_out(&anim, 100, 100);
-
-    // neopixel_anim_rainbow(&anim, 500);
-
-    // neopixel_anim_rainbow_cycle(&anim, 50);
-
-    // neopixel_anim_color_wipe(&anim, 100, 0xAABBCC);
-
-    //neopixel_anim_theater_chase(&anim, 100, 0x00FF00);
-
-    //neopixel_anim_theater_chase_rainbow(&anim, 100);
-
-    // neopixel_set_pixel_color_rgb(&neopixel, 0, 0x00FF00); // Green
-    // neopixel_update(&neopixel);
-
-    // neopixel_anim_rainbow_water(&anim, 100);
-
-    // neopixel_anim_solid(&anim, 0x00FF00); // Green
-
     DBG_MSG("Alive\r\n");
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
@@ -155,8 +117,6 @@ int main(void)
     {
       blink_led();
       print_msg();
-      // send_pwm();
-      // neopixel_anim_update(&anim);
     }
 }
 
@@ -228,17 +188,8 @@ void print_msg(void)
   if (Get_Systick_Cnt() - last_tick > 20)
   {
     last_tick = Get_Systick_Cnt();
-    redCycle = (redCycle + 1) % 1000;
-    LED_SetPWM_Red(redCycle);
-
-
-    // DBG_MSG("LED PWM Off\r\n");
-    // LED_PWM_Stop();
-    // DBG_MSG("TIM2 CNT: %d\r\n", READ_REG(TIM2->CNT));
-    // DBG_MSG("TIM2 ARR: %d\r\n", READ_REG(TIM2->ARR));
-    // DBG_MSG("TIM2 CCR3: %d\r\n", READ_REG(TIM2->CCR3));
-    // DBG_MSG("TIM Update Cnt: %d\r\n", TimUpdateCnt);
-    // DBG_MSG("dma_transfer_cplt: %d\r\n", dma_transfer_cplt_cnt);
+    // redCycle = (redCycle + 1) % 1000;
+    // LED_SetPWM_Red(redCycle);
   }
 }
 

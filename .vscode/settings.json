@@ -12,6 +12,14 @@
         "drv_uart.h": "c",
         "pwm_dma.h": "c",
         "neopixel.h": "c",
-        "neopixel_animation.h": "c"
+        "neopixel_animation.h": "c",
+        "p_tasks.h": "c",
+        "p_config.h": "c",
+        "button.h": "c",
+        "p_type.h": "c",
+        "common_type.h": "c",
+        "led_animation.h": "c",
+        "led_transition_manager.h": "c",
+        "bsp_led_pwm.h": "c"
     }
 }
