@@ -1479,7 +1479,7 @@ void LED_Animation_PerformQuadraticInterpolation(LED_Handle_t* this, uint32_t el
     }
 
 // Print interpolated color
-#if 1
+#if 0
     LED_ANIMATION_DBG_MSG("Interpolated Color (Quadratic): ");
     for (uint8_t i = 0; i < colorCount; i++)
     {

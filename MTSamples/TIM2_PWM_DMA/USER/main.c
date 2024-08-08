@@ -32,6 +32,8 @@
 #include "neopixel.h"
 #include "neopixel_animation.h"
 #include "bsp_led_pwm.h"
+#include "p_config.h"
+#include "p_tasks.h"
 
 #define DEBUG_BUFFER_SIZE 256
 char debugBuffer[DEBUG_BUFFER_SIZE];
@@ -90,6 +92,64 @@ void print_prescaler_values() {
     DBG_MSG("APB1 Prescaler Value: %u\r\n", prescaler_value);
 }
 
+#if 0
+/**
+ * @brief  Callback function for LED animation Events.
+ */
+static void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status)
+{
+      switch (status)
+    {
+    case LED_STATUS_ANIMATION_STARTED:
+    DBG_MSG("LED_STATUS_ANIMATION_STARTED\r\n");
+        break;
+      #if USE_WHITE_LED
+          // Turn off White LED
+          LED_RGYW_WHITE_OFF;
+      #endif 
+        break;
+
+    case LED_STATUS_ANIMATION_COMPLETED:
+    DBG_MSG("LED_STATUS_ANIMATION_COMPLETED\r\n");
+        break;
+
+    case LED_STATUS_ANIMATION_STOPPED:
+    DBG_MSG("LED_STATUS_ANIMATION_STOPPED\r\n");
+        break;
+
+    case LED_STATUS_ANIMATION_TRANSITION_STARTED:
+    DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\r\n");
+      #if USE_WHITE_LED
+          // Turn off White LED
+          LED_RGYW_WHITE_OFF;
+      #endif 
+        break;
+
+    case LED_STATUS_ANIMATION_TRANSITION_COMPLETED:
+    {
+      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_COMPLETED\r\n");
+      // Once the LED animation is completed, turn on the white LED
+      #if USE_WHITE_LED
+      if (TurnOnWhiteLEDOnCompletion && LED_Transition_IsLEDOff(&LEDTransition))
+      {
+        TurnOnWhiteLEDOnCompletion = false;
+        LED_RGYW_WHITE_ON;
+      }
+      #endif 
+    }
+      break;
+
+    default:
+        if (IS_LED_ERROR_STATUS(status))
+        {
+            DBG_MSG("LED_STATUS_ERROR\r\n");
+        }
+        break;
+    }
+
+}
+#endif
+
 int main(void)
 {
     Systick_Init(SystemCoreClock / 1000);
@@ -107,7 +167,16 @@ int main(void)
 
     LED_RGYW_TIM_Init();
 
-    LED_PWM_Start();
+    PD_Initialise();
+    
+    // // LED Complete Callback is optional and can be used to trigger other events when LED animations are complete.
+    // LED_Animation_Init(&MainLED, &LED_Controller, LED_Complete_Callback);
+    // LED_Transition_Init(&LEDTransition, &MainLED);
+
+    // // This Mapping is optional and can be used to map the LED transitions to the LED animations.
+    // LED_Transition_SetMapping(&LEDTransition, LEDTransitionMap, LED_TRANSITION_MAP_SIZE);
+
+    // LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, 300);
 
     DBG_MSG("Alive\r\n");
 
@@ -115,6 +184,15 @@ int main(void)
 		
     while(1)
     {
+
+      if (Get_Systick_Cnt() != last_tick)
+      {
+        // LED_Transition_Update(&LEDTransition, Get_Systick_Cnt());
+        PD_RunProductControlTasks();
+
+        last_tick = Get_Systick_Cnt();
+      }
+
       blink_led();
       print_msg();
     }

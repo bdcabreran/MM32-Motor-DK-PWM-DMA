@@ -1,8 +1,9 @@
 #include "main.h"
 #include "bsp_led_pwm.h"
 #include "button.h"
-#include "p_tasks.h"
 #include "p_config.h"
+
+#include "p_tasks.h"
 
 Button_Handle_t BtnPwr = {
     .FilterTicks = 25,

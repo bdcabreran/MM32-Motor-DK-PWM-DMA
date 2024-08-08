@@ -584,6 +584,36 @@
               <FileType>1</FileType>
               <FilePath>..\USER\bsp_led_pwm.c</FilePath>
             </File>
+            <File>
+              <FileName>led_animation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\led_animation.c</FilePath>
+            </File>
+            <File>
+              <FileName>led_transition_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\led_transition_manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>button.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\button.c</FilePath>
+            </File>
+            <File>
+              <FileName>mci_mock.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\mci_mock.c</FilePath>
+            </File>
+            <File>
+              <FileName>p_config.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\p_config.c</FilePath>
+            </File>
+            <File>
+              <FileName>p_tasks.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\p_tasks.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

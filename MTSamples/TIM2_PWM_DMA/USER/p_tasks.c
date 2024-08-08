@@ -3,6 +3,21 @@
 #include "p_config.h"
 #include "mci_mock.h"
 
+
+
+#define DEBUG_BUFFER_SIZE 256
+static char debugBuffer[DEBUG_BUFFER_SIZE];
+
+#define PTASK_DBG_ENABLE 1
+#if PTASK_DBG_ENABLE
+#define PTASK_DBG_MSG(fmt, ...) do { \
+  snprintf(debugBuffer, DEBUG_BUFFER_SIZE, (fmt), ##__VA_ARGS__); \
+  Uart_Put_Buff(debugBuffer, strlen(debugBuffer)); \
+} while(0)
+#else
+#define PTASK_DBG_MSG(fmt, ...) do { } while(0)
+#endif
+
 #define SLEEP_TICKS 5000
 #define BATT_FULL_LIGHT_OFF_DURATION_TICKS 3000
 #define ON_TICKS (60000*60) //60 minutes 
@@ -163,6 +178,7 @@ void PD_Initialise(void)
   Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
 
   Product.InitComplete = true;
+  PTASK_DBG_MSG("Product Control Initialised.\r\n");
 }
 
 /**
@@ -371,24 +387,29 @@ static void PD_RunStateMachine(void)
 
   if (MCI_IsBatteryPercentageInitialised() == true)
   {
+    // PTASK_DBG_MSG("Battery Percentage Initialised.\r\n");
     BatteryDisplayPercent = MCI_GetBatteryPercentage();
     /// TODO: could change to UART commands in future.
     if (BatteryDisplayPercent == (uint8_t)100)
     {
+      // PTASK_DBG_MSG("Battery Full.\r\n");
       ChargingFinished = true;
     }
     else
     {
+      // PTASK_DBG_MSG("Battery Percent: %d\r\n", BatteryDisplayPercent);
       ChargingFinished = false;
     }
 
 #ifndef DISABLE_BATTERY_EMPTY
     if (BatteryDisplayPercent == (uint8_t)0)
     {
+      // PTASK_DBG_MSG("Battery Empty.\r\n");
       BatteryIsEmpty = true;
     }
     else
     {
+      // PTASK_DBG_MSG("Battery Not Empty.\r\n");
       BatteryIsEmpty = false;
     }
 #endif
@@ -404,6 +425,7 @@ static void PD_RunStateMachine(void)
   {
   case P_IDLE:
   {
+    // PTASK_DBG_MSG("P_IDLE\r\n");
     if (Product.State.Configured == false)
     {
       MCI_StopMotor();
@@ -412,11 +434,10 @@ static void PD_RunStateMachine(void)
       Product.State.Configured = true;
 
       // MOCK! 
-      P_TASK_DBG_MSG("Turn Off Single LEDs\n");
-    //   SPEED1_LED_OFF;
-    //   SPEED2_LED_OFF;
-    //   SPEED3_LED_OFF;
-    //   TURBOL_LED_OFF;
+      SPEED1_LED_OFF;
+      SPEED2_LED_OFF;
+      SPEED3_LED_OFF;
+      TURBOL_LED_OFF;
 
       LEDFlashState = false;
       LEDFlashCounter = 0;
@@ -432,6 +453,7 @@ static void PD_RunStateMachine(void)
           if (ChargingFinished == true)
           {
             /* Turn off LED as charging is done. */
+            PTASK_DBG_MSG("P_IDLE: Charging Finished, Turning Off LEDs\r\n");
             LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
           }
           else
@@ -443,12 +465,14 @@ static void PD_RunStateMachine(void)
         else
         {
           /* If cable not plugged, turn off. */
+          PTASK_DBG_MSG("P_IDLE: Cable Not Plugged, Turning off LEDs\r\n");
           LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
         }
       }
       else
       {
         /* If no battery detected, turn off. */
+        PTASK_DBG_MSG("P_IDLE: No Battery Detected, Turning off LEDs\r\n");
         LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
       }
     }
@@ -473,6 +497,7 @@ static void PD_RunStateMachine(void)
 
       if (CMD == UI_TOUCH_PWR_LONG)
       {
+        PTASK_DBG_MSG("P_IDLE: UI_TOUCH_PWR_LONG\r\n");
 #ifdef BATT_EMPTY_AUTO_OFF_ENABLE
         if (BatteryIsEmpty == true)
         {
@@ -488,11 +513,13 @@ static void PD_RunStateMachine(void)
       }
       else if (CMD == UI_TOUCH_PWR_SHORT)
       {
+        PTASK_DBG_MSG("P_IDLE: UI_TOUCH_PWR_SHORT\r\n");
         if (MCI_IsBatteryDetected() == true)
         {
           /* Show battery life on LED. */
           ShowBatteryLife = true;
           ShowBatteryLifeConfigured = false;
+          PTASK_DBG_MSG("P_IDLE: Show Battery Life\r\n");
         }
       }
     }
@@ -515,6 +542,7 @@ static void PD_RunStateMachine(void)
 
   case P_START:
   {
+    PTASK_DBG_MSG("P_START\r\n");
 
     if (MCI_StartMotor() == true)
     {
@@ -561,6 +589,7 @@ static void PD_RunStateMachine(void)
 
   case P_ON:
   {
+    PTASK_DBG_MSG("P_ON\r\n");
     /* Can move to P_IDLE, P_CABLEIN or P_FAULT_NOW from here. */
     static bool BattLowStatePrev = false;
     bool BattLowState = false;
@@ -739,6 +768,7 @@ static void PD_RunStateMachine(void)
 
   case P_SLEEP:
   {
+    PTASK_DBG_MSG("P_SLEEP\r\n");
     if (MCI_IsCablePlugged() == true)
     {
       Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
@@ -803,6 +833,7 @@ static void PD_RunStateMachine(void)
 
   case P_FAULT_NOW:
   {
+    PTASK_DBG_MSG("P_FAULT_NOW\r\n");
     if (Product.State.Configured == false)
     {
       if (Product.ErrorCodeIndex != -1)
@@ -831,6 +862,7 @@ static void PD_RunStateMachine(void)
 
   case P_FAULT_ACKNOWLEDGE:
   {
+    PTASK_DBG_MSG("P_FAULT_ACKNOWLEDGE\r\n");
     if (Product.State.Counter == 0)
     {
       MCI_ResetFaultState();
@@ -1331,6 +1363,7 @@ static void PD_SetBatteryLevel(uint8_t Percentage)
   }
 
   Product.BatteryLevel = Level;
+  // PTASK_DBG_MSG("Battery Level: %d\r\n", Level);  
 }
 
 static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level)
@@ -1510,6 +1543,7 @@ static void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status
       switch (status)
     {
     case LED_STATUS_ANIMATION_STARTED:
+      PTASK_DBG_MSG("LED_STATUS_ANIMATION_STARTED\r\n");
       #if USE_WHITE_LED
           // Turn off White LED
           LED_RGYW_WHITE_OFF;
@@ -1517,12 +1551,15 @@ static void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status
         break;
 
     case LED_STATUS_ANIMATION_COMPLETED:
+    PTASK_DBG_MSG("LED_STATUS_ANIMATION_COMPLETED\r\n");
         break;
 
     case LED_STATUS_ANIMATION_STOPPED:
+    PTASK_DBG_MSG("LED_STATUS_ANIMATION_STOPPED\r\n");
         break;
 
     case LED_STATUS_ANIMATION_TRANSITION_STARTED:
+    PTASK_DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\r\n");
       #if USE_WHITE_LED
           // Turn off White LED
           LED_RGYW_WHITE_OFF;
@@ -1531,6 +1568,7 @@ static void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status
 
     case LED_STATUS_ANIMATION_TRANSITION_COMPLETED:
     {
+      PTASK_DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_COMPLETED\r\n");
       // Once the LED animation is completed, turn on the white LED
       #if USE_WHITE_LED
       if (TurnOnWhiteLEDOnCompletion && LED_Transition_IsLEDOff(&LEDTransition))
@@ -1545,6 +1583,7 @@ static void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status
     default:
         if (IS_LED_ERROR_STATUS(status))
         {
+          PTASK_DBG_MSG("LED_STATUS_ERROR\r\n");
         }
         break;
     }
