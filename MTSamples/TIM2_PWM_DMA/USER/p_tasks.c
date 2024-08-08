@@ -111,16 +111,7 @@ static void PD_ProcessDebuggerCommands(void);
 static void PD_UserInput(void);
 static void PD_RunStateMachine(void);
 
-static void PD_BtnPwr_OnShortButtonPress(void);
-static void PD_BtnPwr_OnLongButtonPress(void);
-static void PD_BtnSpeed1_OnShortButtonPress(void);
-static void PD_BtnSpeed1_OnLongButtonPress(void);
-static void PD_BtnSpeed2_OnShortButtonPress(void);
-static void PD_BtnSpeed2_OnLongButtonPress(void);
-static void PD_BtnSpeed3_OnShortButtonPress(void);
-static void PD_BtnSpeed3_OnLongButtonPress(void);
-static void PD_BtnTurbo_OnShortButtonPress(void);
-static void PD_BtnTurbo_OnLongButtonPress(void);
+
 void PD_RunSpeedChangeIndication(uint8_t Index);
 static void PD_RunBuzzer(void);
 static void PD_RunSubsystem_RGBW_LED(void);
@@ -267,57 +258,57 @@ static void PD_RunSubsystem_RGBW_LED(void)
   }
 }
 
-static void PD_BtnPwr_OnShortButtonPress(void)
+void PD_BtnPwr_OnShortButtonPress(void)
 {
   UICommand |= UI_TOUCH_PWR_SHORT;
 }
 
-static void PD_BtnPwr_OnLongButtonPress(void)
+void PD_BtnPwr_OnLongButtonPress(void)
 {
   UICommand |= UI_TOUCH_PWR_LONG;
 }
 
-static void PD_BtnSpeed1_OnShortButtonPress(void)
+void PD_BtnSpeed1_OnShortButtonPress(void)
 {
   UICommand |= UI_TOUCH_SPEED1_SHORT;
 }
 
-static void PD_BtnSpeed1_OnLongButtonPress(void)
+void PD_BtnSpeed1_OnLongButtonPress(void)
 {
   UICommand |= UI_TOUCH_SPEED1_LONG;
 }
 
-static void PD_BtnSpeed2_OnShortButtonPress(void)
+void PD_BtnSpeed2_OnShortButtonPress(void)
 {
   UICommand |= UI_TOUCH_SPEED2_SHORT;
 }
 
-static void PD_BtnSpeed2_OnLongButtonPress(void)
+void PD_BtnSpeed2_OnLongButtonPress(void)
 {
   UICommand |= UI_TOUCH_SPEED2_LONG;
 }
 
-static void PD_BtnSpeed3_OnShortButtonPress(void)
+void PD_BtnSpeed3_OnShortButtonPress(void)
 {
   UICommand |= UI_TOUCH_SPEED3_SHORT;
 }
 
-static void PD_BtnSpeed3_OnLongButtonPress(void)
+void PD_BtnSpeed3_OnLongButtonPress(void)
 {
   UICommand |= UI_TOUCH_SPEED3_LONG;
 }
 
-static void PD_BtnTurbo_OnShortButtonPress(void)
+void PD_BtnTurbo_OnShortButtonPress(void)
 {
   UICommand |= UI_TOUCH_TURBO_SHORT;
 }
 
-static void PD_BtnTurbo_OnLongButtonPress(void)
+void PD_BtnTurbo_OnLongButtonPress(void)
 {
   UICommand |= UI_TOUCH_TURBO_LONG;
 }
 
-static void PD_ClearAllBufferedCommands(void)
+void PD_ClearAllBufferedCommands(void)
 {
   UICommand = UI_NO_CMD;
 }
