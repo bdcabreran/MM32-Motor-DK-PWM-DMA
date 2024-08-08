@@ -178,7 +178,7 @@ int main(void)
 
     // LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, 300);
 
-    DBG_MSG("Alive\r\n");
+    DBG_MSG("I'm Alive\r\n");
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
 		
