@@ -77,7 +77,7 @@ void LED_Transition_Test_Execute (void)
   static uint8_t anim_index = 0;
   static uint32_t last_tick = 0;
 
-  if (Get_Systick_Cnt() - last_tick > 3000)
+  if (Get_Systick_Cnt() - last_tick > 5000)
   {
     last_tick = Get_Systick_Cnt();
 
@@ -89,12 +89,14 @@ void LED_Transition_Test_Execute (void)
       break;
     case 1:
       LED_Transition_ToFlash(&LEDTransition, &LED_Flash_Error, LED_TRANSITION_INTERPOLATE, 300);
+      break;
     case 2:
       LED_Transition_ToPulse(&LEDTransition, &LED_Pulse_BatteryCharge_LowAndVeryLow, LED_TRANSITION_INTERPOLATE, 300);
       break;
     case 3:
       LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryChargeFinished, LED_TRANSITION_INTERPOLATE, 300);
-    case 4:
+			break;
+		case 4:
       LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, 300);
       break;
     
