@@ -102,7 +102,6 @@ void PD_RunWaitForSinglePress(void);
 static uint16_t PD_UICommandScheduler(void);
 
 static void PD_ClearAllBufferedCommands(void);
-void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status);
 
 void PD_Initialise(void)
 {
