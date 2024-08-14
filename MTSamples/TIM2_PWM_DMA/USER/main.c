@@ -37,30 +37,76 @@
 
 volatile bool SleepTriggered = false;
 
+#define LED_TRANSITION_TEST (1)
+
 
 #define DEBUG_BUFFER_SIZE 256
 char debugBuffer[DEBUG_BUFFER_SIZE];
 
 #define USE_PWM_MODE_2 0
-#define ENABLE_DBG_MSG 1
+#define ENABLE_DBG_MSG_MAIN 1
 
-#if ENABLE_DBG_MSG
-#define DBG_MSG(fmt, ...) do { \
+#if ENABLE_DBG_MSG_MAIN
+#define DBG_MSG_MAIN(fmt, ...) do { \
   snprintf(debugBuffer, DEBUG_BUFFER_SIZE, (fmt), ##__VA_ARGS__); \
   Uart_Put_Buff(debugBuffer, strlen(debugBuffer)); \
 } while(0)
 #else
-#define DBG_MSG(fmt, ...) do { } while(0)
+#define DBG_MSG_MAIN(fmt, ...) do { } while(0)
 #endif
 
 void blink_led(void);
-void print_msg(void);
-void send_pwm(void);
-void set_pixel_color(uint8_t led_index, uint8_t red, uint8_t green, uint8_t blue, uint8_t* led_data);
-void updateLEDColor(int led_num);
 
 /** Extern Variables*/
 extern uint32_t SystemCoreClock;
+
+
+
+void LED_Transitions_Test(void)
+{
+  LED_Animation_Init(&MainLED, &LED_Controller, LED_Complete_Callback);
+  LED_Transition_Init(&LEDTransition, &MainLED);
+
+  LED_Transition_SetMapping(&LEDTransition, LEDTransitionMap, LED_TRANSITION_MAP_SIZE);
+
+  DBG_MSG_MAIN("LED Transition Test\r\n");
+}
+
+void LED_Transition_Test_Execute (void)
+{
+  static uint8_t anim_index = 0;
+  static uint32_t last_tick = 0;
+
+  if (Get_Systick_Cnt() - last_tick > 3000)
+  {
+    last_tick = Get_Systick_Cnt();
+
+    DBG_MSG_MAIN("Transition %d\r\n", anim_index);
+    switch (anim_index)
+    {
+    case 0: 
+      LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, 300);
+      break;
+    case 1:
+      LED_Transition_ToFlash(&LEDTransition, &LED_Flash_Error, LED_TRANSITION_INTERPOLATE, 300);
+    case 2:
+      LED_Transition_ToPulse(&LEDTransition, &LED_Pulse_BatteryCharge_LowAndVeryLow, LED_TRANSITION_INTERPOLATE, 300);
+      break;
+    case 3:
+      LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryChargeFinished, LED_TRANSITION_INTERPOLATE, 300);
+    case 4:
+      LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, 300);
+      break;
+    
+    default:
+      break;
+    }
+
+    anim_index = (anim_index + 1) % 5;
+  }
+
+  LED_Transition_Update(&LEDTransition);
+}
 
 
 int main(void)
@@ -70,82 +116,35 @@ int main(void)
     Drv_Uart_Init(115200);
     Board_Gpio_Init();
 
-    DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
+    DBG_MSG_MAIN("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
 
     LED_RGYW_TIM_Init();
 
+
+    #if LED_TRANSITION_TEST
+    LED_Transitions_Test();
+    #else 
     PD_Initialise();
+    #endif 
     
-    // // // LED Complete Callback is optional and can be used to trigger other events when LED animations are complete.
-    // LED_Animation_Init(&MainLED, &LED_Controller, LED_Complete_Callback);
-    // LED_Transition_Init(&LEDTransition, &MainLED);
-
-    // // This Mapping is optional and can be used to map the LED transitions to the LED animations.
-    // LED_Transition_SetMapping(&LEDTransition, LEDTransitionMap, LED_TRANSITION_MAP_SIZE);
-
-    // LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, 300);
-
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
 		
     while(1)
     {
 
+      #if LED_TRANSITION_TEST
+      LED_Transition_Test_Execute();
+      #else
       if (Get_Systick_Cnt() != last_tick)
       {
         PD_RunProductControlTasks();
         last_tick = Get_Systick_Cnt();
       }
+      #endif 
 
       blink_led();
     }
-}
-
-void TransferComplete_Callback()
-{
-  dma_transfer_cplt_cnt++;
-  neopixel.stop_dma();
-}
-
-void DMA1_Channel1_IRQHandler(void) {
-    // Check for DMA half transfer complete interrupt
-    if (DMA_GetITStatus(DMA1_IT_HT1)) {
-        DMA_ClearITPendingBit(DMA1_IT_HT1);
-
-    }
-
-    // Check for DMA transfer complete interrupt
-    if (DMA_GetITStatus(DMA1_IT_TC1)) {
-        DMA_ClearITPendingBit(DMA1_IT_TC1);
-        			
-        TransferComplete_Callback();
-    }
-
-    // Check for DMA transfer error interrupt
-    if (DMA_GetITStatus(DMA1_IT_TE1)) {
-        DMA_ClearITPendingBit(DMA1_IT_TE1);
-    }
-}
-
-
-void TimerUpdate_Callback(void)
-{
-  TimUpdateCnt++;
-}
-
-void TIM2_IRQHandler(void)
-{
-    if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
-    {
-        TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-        TimerUpdate_Callback();
-    }
-
-    if(TIM_GetITStatus(TIM2, TIM_IT_CC3) != RESET)
-   {
-       TIM_ClearITPendingBit(TIM2, TIM_IT_CC3);
-   }
-
 }
 
 
@@ -161,17 +160,3 @@ void blink_led(void)
   }
 }
 
-
-
-void send_pwm(void)
-{
-  static uint32_t last_tick = 0;
-  if (Get_Systick_Cnt() - last_tick > 1000)
-  {
-    last_tick = Get_Systick_Cnt();
-
-    // Send the command after 5 seconds
-    // neopixel_anim_close(&anim, 100);
-		neopixel_anim_solid(&anim, 0x00FF00); 
-  }
-}
