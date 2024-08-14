@@ -61,97 +61,7 @@ void updateLEDColor(int led_num);
 
 /** Extern Variables*/
 extern uint32_t SystemCoreClock;
-volatile uint32_t TimUpdateCnt = 0;
-volatile uint8_t dma_transfer_cplt_cnt = 0;
-neopixel_t neopixel;
-neopixel_animation_t anim;
 
-void print_prescaler_values() {
-    // Access RCC register to read APB1 prescaler
-    uint32_t apb1_prescaler = RCC->CFGR & RCC_CFGR_PPRE1; // Assuming APB1 is configured using bits RCC_CFGR_PPRE
-
-    // Determine prescaler value
-    uint32_t prescaler_value = 1; // Default value
-    switch(apb1_prescaler) {
-        case RCC_CFGR_PPRE1_DIV1:
-            prescaler_value = 1;
-            break;
-        case RCC_CFGR_PPRE1_DIV2:
-            prescaler_value = 2;
-            break;
-        case RCC_CFGR_PPRE1_DIV4:
-            prescaler_value = 4;
-            break;
-        case RCC_CFGR_PPRE1_DIV8:
-            prescaler_value = 8;
-            break;
-        case RCC_CFGR_PPRE1_DIV16:
-            prescaler_value = 16;
-            break;
-    }
-
-    // Print the prescaler value
-    // Example: Assuming UART for output
-    DBG_MSG("APB1 Prescaler Value: %u\r\n", prescaler_value);
-}
-
-#if 0
-/**
- * @brief  Callback function for LED animation Events.
- */
-static void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status)
-{
-      switch (status)
-    {
-    case LED_STATUS_ANIMATION_STARTED:
-    DBG_MSG("LED_STATUS_ANIMATION_STARTED\r\n");
-        break;
-      #if USE_WHITE_LED
-          // Turn off White LED
-          LED_RGYW_WHITE_OFF;
-      #endif 
-        break;
-
-    case LED_STATUS_ANIMATION_COMPLETED:
-    DBG_MSG("LED_STATUS_ANIMATION_COMPLETED\r\n");
-        break;
-
-    case LED_STATUS_ANIMATION_STOPPED:
-    DBG_MSG("LED_STATUS_ANIMATION_STOPPED\r\n");
-        break;
-
-    case LED_STATUS_ANIMATION_TRANSITION_STARTED:
-    DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\r\n");
-      #if USE_WHITE_LED
-          // Turn off White LED
-          LED_RGYW_WHITE_OFF;
-      #endif 
-        break;
-
-    case LED_STATUS_ANIMATION_TRANSITION_COMPLETED:
-    {
-      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_COMPLETED\r\n");
-      // Once the LED animation is completed, turn on the white LED
-      #if USE_WHITE_LED
-      if (TurnOnWhiteLEDOnCompletion && LED_Transition_IsLEDOff(&LEDTransition))
-      {
-        TurnOnWhiteLEDOnCompletion = false;
-        LED_RGYW_WHITE_ON;
-      }
-      #endif 
-    }
-      break;
-
-    default:
-        if (IS_LED_ERROR_STATUS(status))
-        {
-            DBG_MSG("LED_STATUS_ERROR\r\n");
-        }
-        break;
-    }
-
-}
-#endif
 
 int main(void)
 {
@@ -161,12 +71,6 @@ int main(void)
     Board_Gpio_Init();
 
     DBG_MSG("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
-    // PWM_DMA_Init();
-
-    DBG_MSG("RCC_GetHCLKFreq: %d Hz\r\n", RCC_GetHCLKFreq());
-    DBG_MSG("RCC_GetPCLK1Freq: %d Hz\r\n", RCC_GetPCLK1Freq());
-    DBG_MSG("RCC_GetPCLK2Freq: %d Hz\r\n", RCC_GetPCLK2Freq());
-   print_prescaler_values();
 
     LED_RGYW_TIM_Init();
 
@@ -181,25 +85,19 @@ int main(void)
 
     // LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, 300);
 
-    DBG_MSG("I'm Alive\r\n");
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
-
-    PD_BtnPwr_OnShortButtonPress();
 		
     while(1)
     {
 
       if (Get_Systick_Cnt() != last_tick)
       {
-        // LED_Transition_Update(&LEDTransition, Get_Systick_Cnt());
         PD_RunProductControlTasks();
-
         last_tick = Get_Systick_Cnt();
       }
 
       blink_led();
-      print_msg();
     }
 }
 
@@ -264,17 +162,6 @@ void blink_led(void)
 }
 
 
-void print_msg(void)
-{
-  static uint32_t last_tick = 0;
-  static uint16_t redCycle = 0;
-  if (Get_Systick_Cnt() - last_tick > 20)
-  {
-    last_tick = Get_Systick_Cnt();
-    // redCycle = (redCycle + 1) % 1000;
-    // LED_SetPWM_Red(redCycle);
-  }
-}
 
 void send_pwm(void)
 {

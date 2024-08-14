@@ -60,15 +60,27 @@ const LED_Controller_t LED_Controller = {
     .MaxDutyCycle = LED_RGYW_PWM_MAX_PULSE,   
 };
 
+#define USING_RGB_LED (1)
+
 // LED Colors
-const RGY_Color_t YellowColor = { .R = 0, .G = 0, .Y = 255};
+#if USING_RGB_LED
+const RGY_Color_t YellowColor = { .R = 255, .G = 255, .Y = 0};
+#else 
+const RGY_Color_t YellowColor = { .R = 0, .G = 0, .Y = 255 };
+#endif 
+
 const RGY_Color_t GreenColor = { .R = 0, .G = 128, .Y = 0};
 const RGY_Color_t RedColor = { .R = 255, .G = 0, .Y = 0};
 
 
 // TODO: this is supposed to be white in future
 // If The White LED is handled without PWM, then we need to gently transition to OFF state and then turn on the white LED
+#if USING_RGB_LED
+RGY_Color_t DefaultColor = { .R = 128, .G = 168, .Y = 0 };
+#else 
 RGY_Color_t DefaultColor = { .R = 0, .G = 40, .Y = 128};
+#endif
+
 
 // LED Animations
 const LED_Animation_Solid_t LED_Solid_BatteryChargeFinished = {
@@ -161,8 +173,13 @@ RGBLED_Handle_t MainLED = {
 /// in future as this one is RGY but we obviously want to use the same
 /// software module to control it.
 RGBColor_Handle_t RedColor = {.R = 255, .G = 0, .B = 0};
-RGBColor_Handle_t YellowColor = {.R = 0, .G = 0, .B = 255};
 RGBColor_Handle_t GreenColor = {.R = 0, .G = 128, .B = 0};
+
+#if USING_RGB_LED
+RGBColor_Handle_t YellowColor = { .R = 128, .G = 168, .Y = 0 };
+#else
+RGBColor_Handle_t YellowColor = {.R = 0, .G = 0, .B = 255};
+#endif
 
 RGBLED_Solid_Handle_t LEDBatteryChargeFinished = {.Color = &GreenColor};
 RGBLED_Solid_Handle_t LEDSolid_BatteryLow = {.Color = &RedColor};
@@ -170,7 +187,12 @@ RGBLED_Solid_Handle_t LEDSolid_BatteryMid = {.Color = &YellowColor};
 RGBLED_Solid_Handle_t LEDSolid_BatteryHigh = {.Color = &GreenColor};
 
 /// TODO: this is supposed to be white in future
+#if USING_RGB_LED
 RGBColor_Handle_t DefaultColor = {.R = 0, .G = 40, .B = 128};
+#else 
+RGBColor_Handle_t DefaultColor = {.R = 0, .G = 40, .B = 128};
+#endif 
+
 RGBLED_Solid_Handle_t LEDSolid_DefaultColor = {.Color = &DefaultColor};
 
 RGBLED_Flash_Handle_t LEDFlash_BatteryVeryLow = {
