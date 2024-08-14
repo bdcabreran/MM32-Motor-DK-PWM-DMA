@@ -75,3 +75,10 @@ void MCI_SetMockNackedFaults(uint8_t faults) {
     nackedFaults = faults;
 }
 
+void Buzzer_Disable(void) {
+    // Mock implementation: Do nothing
+}
+
+void Buzzer_Enable(uint16_t Frequency) {
+    // Mock implementation: Do nothing
+}

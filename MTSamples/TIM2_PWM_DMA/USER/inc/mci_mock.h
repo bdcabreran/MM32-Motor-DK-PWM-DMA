@@ -65,4 +65,7 @@ void MCI_SetSpeedSetting(uint8_t SpeedSetting);
 uint8_t MCI_GetNackedFaults(void);
 void MCI_ResetFaultState(void);
 
+void Buzzer_Disable(void);
+void Buzzer_Enable(uint16_t Frequency);
+
 #endif // MCI_MOCK_H

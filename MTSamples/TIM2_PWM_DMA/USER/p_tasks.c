@@ -5,10 +5,10 @@
 #include "debug_config.h"
 #include "mci_mock.h"
 
-#define PTASK_DBG_ENABLE 1
+#define PTASK_DBG_ENABLE 0
 
 #if PTASK_DBG_ENABLE
-
+#include "drv_uart.h"
 #define DEBUG_BUFFER_SIZE 256
 static char debugBuffer[DEBUG_BUFFER_SIZE];
 static const char* TAG = "PTASK";
@@ -238,12 +238,12 @@ static void PD_RunSubsystem_RGBLED(void)
   }
 }
 
-static void PD_BtnPwr_OnShortButtonPress(void)
+void PD_BtnPwr_OnShortButtonPress(void)
 {
   UICommand |= UI_TOUCH_PWR_SHORT;
 }
 
-static void PD_BtnPwr_OnLongButtonPress(void)
+void PD_BtnPwr_OnLongButtonPress(void)
 {
   UICommand |= UI_TOUCH_PWR_LONG;
 }
@@ -1715,6 +1715,7 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
       switch (status)
     {
     case LED_STATUS_ANIMATION_STARTED:
+    DBG_MSG("LED_STATUS_ANIMATION_STARTED\n");
       #if USE_WHITE_LED
           // Turn off White LED
           LED_RGYW_WHITE_OFF;
@@ -1722,12 +1723,15 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
         break;
 
     case LED_STATUS_ANIMATION_COMPLETED:
+    DBG_MSG("LED_STATUS_ANIMATION_COMPLETED\n");
         break;
 
     case LED_STATUS_ANIMATION_STOPPED:
+    DBG_MSG("LED_STATUS_ANIMATION_STOPPED\n");
         break;
 
     case LED_STATUS_ANIMATION_TRANSITION_STARTED:
+    DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\n");
       #if USE_WHITE_LED
           // Turn off White LED
           LED_RGYW_WHITE_OFF;
@@ -1736,6 +1740,7 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
 
     case LED_STATUS_ANIMATION_TRANSITION_COMPLETED:
     {
+      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_COMPLETED\n");
       // Once the LED animation is completed, turn on the white LED
       #if USE_WHITE_LED
       if (TurnOnWhiteLEDOnCompletion && LED_Transition_IsLEDOff(&LEDTransition))
@@ -1750,6 +1755,7 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
     default:
         if (IS_LED_ERROR_STATUS(status))
         {
+          DBG_MSG("LED_STATUS_ANIMATION_ERROR\n");
         }
         break;
     }

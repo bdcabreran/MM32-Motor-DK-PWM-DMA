@@ -614,6 +614,26 @@
               <FileType>1</FileType>
               <FilePath>..\USER\p_tasks.c</FilePath>
             </File>
+            <File>
+              <FileName>buzzer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\buzzer.c</FilePath>
+            </File>
+            <File>
+              <FileName>detect_switch.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\detect_switch.c</FilePath>
+            </File>
+            <File>
+              <FileName>led_rgb.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\led_rgb.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_led.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\pwm_led.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

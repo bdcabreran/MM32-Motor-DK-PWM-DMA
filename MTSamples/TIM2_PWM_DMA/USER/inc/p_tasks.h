@@ -2,6 +2,7 @@
 #define __P_TASKS_H__
 
 #include "p_type.h"
+#include "led_transition_manager.h"
 
 /** @brief Product commands
  * Allowed 16 maximum, priority of commands will be LSB to MSB

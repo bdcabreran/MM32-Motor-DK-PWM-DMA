@@ -105,7 +105,7 @@ void LED_Transition_Test_Execute (void)
     anim_index = (anim_index + 1) % 5;
   }
 
-  LED_Transition_Update(&LEDTransition);
+  LED_Transition_Update(&LEDTransition,  Get_Systick_Cnt());
 }
 
 
