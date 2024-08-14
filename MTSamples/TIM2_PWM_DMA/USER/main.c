@@ -35,6 +35,9 @@
 #include "p_config.h"
 #include "p_tasks.h"
 
+volatile bool SleepTriggered = false;
+
+
 #define DEBUG_BUFFER_SIZE 256
 char debugBuffer[DEBUG_BUFFER_SIZE];
 

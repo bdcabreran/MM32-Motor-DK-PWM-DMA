@@ -4,30 +4,19 @@
 #include "p_type.h"
 #include "p_tasks.h"
 #include "button.h"
-// #include "led_rgb.h"
-#include "led_transition_manager.h"
+#include "detect_switch.h"
+#include "buzzer.h"
+#include "debug_config.h"
+
+#define USE_NEW_LED_LIBRARY (1)
+
+#if USE_NEW_LED_LIBRARY
 #include "led_animation.h"
+#include "led_transition_manager.h"
+#else 
+#include "led_rgb.h"
+#endif 
 
-
-#define LED_RGYW_ERROR_FLASH_TIMES (5U)  /* Number of times to flash LED for error. */
-#define LED_RGYW_ERROR_FLASH_ON_TIME (200U)  /* (ms) On-time for LED flash sequence. */
-#define LED_RGYW_ERROR_FLASH_OFF_TIME (150U) /* (ms) Off-time for LED flash sequence. */
-
-#define LED_RGYW_BATT_VERYLOW_FLASH_ON_TIME (1000U) /* (ms) */
-#define LED_RGYW_BATT_VERYLOW_FLASH_OFF_TIME (1000U) /* (ms) */
-
-#define LED_RGYW_BREATH_PERIOD (5000U)      /*(ms)*/
-#define LED_RGYW_BREATH_HOLDIN_TIME (200U)  /*(ms)*/
-#define LED_RGYW_BREATH_HOLDOUT_TIME (100U) /*(ms)*/
-
-#define LED_RGYW_PULSE_RISE_TIME (2300U) /* (ms) */
-#define LED_RGYW_PULSE_FALL_TIME (2300U) /* (ms) */
-#define LED_RGYW_PULSE_HOLD_ON_TIME (200U) /* (ms) */
-#define LED_RGYW_PULSE_HOLD_OFF_TIME (100U) /* (ms) */
-#define LED_RYGW_PULSE_PERIOD (LED_RGYW_PULSE_RISE_TIME + LED_RGYW_PULSE_HOLD_ON_TIME + + LED_RGYW_PULSE_FALL_TIME + LED_RGYW_PULSE_HOLD_OFF_TIME) /* (ms) */
-
-#define SPEED_LED_FLASH_DURATION_ON (750U) /* (ms) */
-#define SPEED_LED_FLASH_DURATION_OFF (250U) /* (ms) */
 
 extern Button_Handle_t BtnPwr;
 extern Button_Handle_t BtnSpeed1;
@@ -35,12 +24,13 @@ extern Button_Handle_t BtnSpeed2;
 extern Button_Handle_t BtnSpeed3;
 extern Button_Handle_t BtnTurbo;
 
-// extern DETSW_Handle_t DCInDetectSwitch;
+extern DETSW_Handle_t DCInDetectSwitch;
 
-// extern BZR_Handle_t Buzzer;
+extern BZR_Handle_t Buzzer;
 
 extern Product_Handle_t Product;
 
+#if USE_NEW_LED_LIBRARY
 // LED Animation Configuration 
 extern LED_Handle_t MainLED;
 extern const LED_Controller_t LED_Controller;
@@ -64,6 +54,22 @@ extern const LED_Animation_Pulse_t LED_Pulse_BatteryCharge_High;
 extern LED_Transition_Handle_t LEDTransition;
 #define LED_TRANSITION_MAP_SIZE 3
 extern const LED_Transition_Config_t LEDTransitionMap[LED_TRANSITION_MAP_SIZE];
+#else 
+extern RGBLED_Handle_t MainLED;
+extern RGBLED_Solid_Handle_t LEDBatteryChargeFinished;
+extern RGBLED_Solid_Handle_t LEDSolid_BatteryLow;
+extern RGBLED_Solid_Handle_t LEDSolid_BatteryMid;
+extern RGBLED_Solid_Handle_t LEDSolid_BatteryHigh;
+extern RGBLED_Solid_Handle_t LEDSolid_DefaultColor;
+extern RGBLED_Flash_Handle_t LEDFlash_BatteryVeryLow;
+extern RGBLED_Flash_Handle_t LEDErrorFlash;
+extern RGBLED_Breath_Handle_t LEDBatteryChargeBreath_LowandVeryLow;
+extern RGBLED_Breath_Handle_t LEDBatteryChargeBreath_Mid;
+extern RGBLED_Breath_Handle_t LEDBatteryChargeBreath_High;
+extern RGBColor_Handle_t YellowColor;
+extern RGBColor_Handle_t GreenColor;
+extern RGBColor_Handle_t RedColor;
+#endif
 
 
 #endif

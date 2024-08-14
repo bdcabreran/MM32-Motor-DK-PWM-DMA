@@ -142,13 +142,5 @@ void PD_GetTouchID(uint8_t TouchID);
 
 void PD_BtnPwr_OnShortButtonPress(void);
 void PD_BtnPwr_OnLongButtonPress(void);
-void PD_BtnSpeed1_OnShortButtonPress(void);
-void PD_BtnSpeed1_OnLongButtonPress(void);
-void PD_BtnSpeed2_OnShortButtonPress(void);
-void PD_BtnSpeed2_OnLongButtonPress(void);
-void PD_BtnSpeed3_OnShortButtonPress(void);
-void PD_BtnSpeed3_OnLongButtonPress(void);
-void PD_BtnTurbo_OnShortButtonPress(void);
-void PD_BtnTurbo_OnLongButtonPress(void);
 
 #endif

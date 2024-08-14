@@ -33,7 +33,35 @@
  * @addtogroup User_Main
  * @{
  */
+#define TURBOL_LED_PORT GPIOB
+#define TURBOL_LED_PIN GPIO_Pin_1
 
+#define SPEED1_LED_PORT GPIOB
+#define SPEED1_LED_PIN GPIO_Pin_4
+
+#define SPEED2_LED_PORT GPIOB
+#define SPEED2_LED_PIN GPIO_Pin_5
+
+#define SPEED3_LED_PORT GPIOB
+#define SPEED3_LED_PIN GPIO_Pin_0
+
+// #define TURBOL_LED_ON GPIO_SetBits(TURBOL_LED_PORT, TURBOL_LED_PIN)
+// #define TURBOL_LED_OFF GPIO_ResetBits(TURBOL_LED_PORT, TURBOL_LED_PIN)
+// #define SPEED1_LED_ON GPIO_SetBits(SPEED1_LED_PORT, SPEED1_LED_PIN)
+// #define SPEED1_LED_OFF GPIO_ResetBits(SPEED1_LED_PORT, SPEED1_LED_PIN)
+// #define SPEED2_LED_ON GPIO_SetBits(SPEED2_LED_PORT, SPEED2_LED_PIN)
+// #define SPEED2_LED_OFF GPIO_ResetBits(SPEED2_LED_PORT, SPEED2_LED_PIN)
+// #define SPEED3_LED_ON GPIO_SetBits(SPEED3_LED_PORT, SPEED3_LED_PIN)
+// #define SPEED3_LED_OFF GPIO_ResetBits(SPEED3_LED_PORT, SPEED3_LED_PIN)
+
+#define TURBOL_LED_ON  /* Do nothing */
+#define TURBOL_LED_OFF /* Do nothing */
+#define SPEED1_LED_ON  /* Do nothing */
+#define SPEED1_LED_OFF /* Do nothing */
+#define SPEED2_LED_ON  /* Do nothing */
+#define SPEED2_LED_OFF /* Do nothing */
+#define SPEED3_LED_ON  /* Do nothing */
+#define SPEED3_LED_OFF /* Do nothing */
 
 extern uint8_t u8Tim1UpdateFlag;
 /**  defind in startup_mm32spin028x.c  */
