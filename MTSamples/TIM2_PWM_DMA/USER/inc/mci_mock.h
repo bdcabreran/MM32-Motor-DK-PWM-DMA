@@ -19,6 +19,41 @@
 #define MC_FAULT_BATT ((uint8_t)0x20)
 
 
+typedef struct
+{
+  uint32_t LastSyncTime;
+  bool MotorOn;
+  uint8_t SpeedSetting;
+  uint8_t PrevMode;
+  uint8_t BatteryPercentage;
+  bool FirstSOCDataReceived;
+  uint8_t NackedFaults;
+  uint8_t AllFaults;
+
+  bool SendFaultAck;
+
+  bool CablePlugged;
+
+  bool BatteryDetected;
+
+  // Transaction IDs for messages
+  int8_t MotorOnTransactionId;
+  int8_t MotorModeTransactionId;
+  int8_t BatterySocTransactionId;
+  int8_t FaultAckTransactionId;
+  int8_t GetFaultTransactionId;
+  int8_t GetBatteryStatusTransactionId;
+  int8_t GetBatteryDetectedTransactionId;
+#ifdef TEST_MODAC_COMMANDS
+  int8_t TestingTransactionID;
+  int32_t TestingReceivedData;
+#endif
+} MCI_Handle_t;
+
+
+extern MCI_Handle_t Mci;
+
+
 bool MCI_IsBatteryPercentageInitialised(void);
 uint8_t MCI_GetBatteryPercentage(void);
 bool MCI_IsBatteryDetected(void);

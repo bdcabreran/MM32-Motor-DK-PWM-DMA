@@ -7,6 +7,9 @@ static bool batteryDetected = true;
 static bool cablePlugged = false;
 static uint8_t nackedFaults = 0;
 
+MCI_Handle_t Mci;
+
+
 // Mock implementations
 
 bool MCI_IsBatteryPercentageInitialised(void) {

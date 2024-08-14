@@ -22,6 +22,7 @@
 /** Files includes */
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 
 /** 
@@ -66,6 +67,9 @@
 extern uint8_t u8Tim1UpdateFlag;
 /**  defind in startup_mm32spin028x.c  */
 extern uint32_t SystemCoreClock;
+
+
+extern volatile bool SleepTriggered;
 
 /**
   * @}
