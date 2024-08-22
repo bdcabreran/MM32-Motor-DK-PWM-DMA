@@ -5,21 +5,23 @@
 #include "debug_config.h"
 #include "mci_mock.h"
 
-#define PTASK_DBG_ENABLE 0
+#define PTASK_DBG_ENABLE 1
 
 #if PTASK_DBG_ENABLE
 #include "drv_uart.h"
+#include "stdio.h"
 #define DEBUG_BUFFER_SIZE 256
-static char debugBuffer[DEBUG_BUFFER_SIZE];
+static int8_t debugBuffer[DEBUG_BUFFER_SIZE]; // Changed to int8_t
 static const char* TAG = "PTASK";
 
 #define DBG_MSG(fmt, ...) do { \
-  snprintf(debugBuffer, DEBUG_BUFFER_SIZE, "%s: " fmt, TAG, ##__VA_ARGS__); \
-  Uart_Put_Buff(debugBuffer, strlen(debugBuffer)); \
+  snprintf((char*)debugBuffer, DEBUG_BUFFER_SIZE, "%s: " fmt, TAG, ##__VA_ARGS__); \
+  Uart_Put_Buff(debugBuffer, strlen((char*)debugBuffer)); \
 } while(0)
 #else
 #define DBG_MSG(fmt, ...) do { } while(0)
 #endif
+
 
 
 // Define if you want White LED to be used, otherwise Default Color (RGY Color) will be used.
@@ -1285,16 +1287,17 @@ static void PD_RunPowerModeStateMachine(void)
         }
         else
         {
-          DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
           #if USE_NEW_LED_LIBRARY
           // if LED not off then turn it off
           if (!LED_Transition_IsLEDOff(&LEDTransition))
           {
+            // DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
             LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
           }
           #else 
           if (MainLED.State.Now != RGBLED_OFF)
           {
+            // DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
             RGBLED_Command_Off(&MainLED, true);
           }
           #endif 
@@ -1470,11 +1473,7 @@ static void PD_SetBatteryLevel(uint8_t Percentage)
 static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSendCmd)
 {
   /* If level has changed or force is set to true, update LED command. */
-  #if USE_NEW_LED_LIBRARY
-  if (PreviousBatteryLevel != Level)
-  #else 
   if (PreviousBatteryLevel != Level || ForceSendCmd == true)
-  #endif 
   {
     switch (Level)
     {
@@ -1512,7 +1511,7 @@ static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSend
       case BATTERY_LEVEL_4:
       {
         #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryMid, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+        LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryHigh, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
         #else 
         RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryHigh, false);
         #endif 
@@ -1553,11 +1552,7 @@ static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSend
 static void PD_SetBatteryLED_Charging(BATTLevel_State_t Level, bool ForceSendCmd)
 {
   /* If level has changed or force is set to true, update LED command. */
-  #if USE_NEW_LED_LIBRARY
-  if (PreviousBatteryLevel != Level)
-  #else
   if (PreviousBatteryLevel != Level || ForceSendCmd == true)
-  #endif
   {  
     switch (Level)
     {

@@ -68,4 +68,11 @@ void MCI_ResetFaultState(void);
 void Buzzer_Disable(void);
 void Buzzer_Enable(uint16_t Frequency);
 
+// Setter functions for mock behavior
+void MCI_SetMockBatteryPercentageInitialised(bool initialised);
+void MCI_SetMockBatteryPercentage(uint8_t percentage);
+void MCI_SetMockBatteryDetected(bool detected);
+void MCI_SetMockCablePlugged(bool plugged);
+void MCI_SetMockNackedFaults(uint8_t faults);
+
 #endif // MCI_MOCK_H

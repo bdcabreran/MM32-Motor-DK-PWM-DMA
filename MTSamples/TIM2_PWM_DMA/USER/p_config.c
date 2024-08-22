@@ -38,6 +38,9 @@ BZR_Handle_t Buzzer;
 
 Product_Handle_t Product;
 
+#define USING_RGB_LED (1)
+
+
 #if USE_NEW_LED_LIBRARY
 
 // RGYW LEDs Configurations
@@ -60,7 +63,6 @@ const LED_Controller_t LED_Controller = {
     .MaxDutyCycle = LED_RGYW_PWM_MAX_PULSE,   
 };
 
-#define USING_RGB_LED (1)
 
 // LED Colors
 #if USING_RGB_LED
@@ -176,7 +178,7 @@ RGBColor_Handle_t RedColor = {.R = 255, .G = 0, .B = 0};
 RGBColor_Handle_t GreenColor = {.R = 0, .G = 128, .B = 0};
 
 #if USING_RGB_LED
-RGBColor_Handle_t YellowColor = { .R = 128, .G = 168, .Y = 0 };
+RGBColor_Handle_t YellowColor = { .R = 255, .G = 255, .B = 0 };
 #else
 RGBColor_Handle_t YellowColor = {.R = 0, .G = 0, .B = 255};
 #endif
@@ -188,7 +190,7 @@ RGBLED_Solid_Handle_t LEDSolid_BatteryHigh = {.Color = &GreenColor};
 
 /// TODO: this is supposed to be white in future
 #if USING_RGB_LED
-RGBColor_Handle_t DefaultColor = {.R = 0, .G = 40, .B = 128};
+RGBColor_Handle_t DefaultColor = { .R = 128, .G = 168, .B = 0 };
 #else 
 RGBColor_Handle_t DefaultColor = {.R = 0, .G = 40, .B = 128};
 #endif 

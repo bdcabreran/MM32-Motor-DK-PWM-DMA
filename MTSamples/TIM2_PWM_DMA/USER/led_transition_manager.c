@@ -4,15 +4,14 @@
 #define LED_TRANSITION_DBG 0
 
 #if LED_TRANSITION_DBG
-#include "stm32l4xx_hal.h"
+#include "drv_uart.h"
 #include <stdio.h>
-extern UART_HandleTypeDef huart2;
 #define LED_TRANSITION_DBG_MSG(fmt, ...)                                                                               \
     do                                                                                                                 \
     {                                                                                                                  \
         static char dbgBuff[DEBUG_BUFFER_SIZE];                                                                        \
         snprintf(dbgBuff, DEBUG_BUFFER_SIZE, (fmt), ##__VA_ARGS__);                                                    \
-        HAL_UART_Transmit(&huart2, (uint8_t*)dbgBuff, strlen(dbgBuff), 1000);                                          \
+        Uart_Put_Buff(dbgBuff, strlen((char*)dbgBuff)); \
     } while (0)
 #else
 #define LED_TRANSITION_DBG_MSG(fmt, ...)                                                                               \

@@ -37,7 +37,8 @@
 
 volatile bool SleepTriggered = false;
 
-#define LED_TRANSITION_TEST (1)
+// Enable if you want to test LED transitions
+#define LED_TRANSITION_TEST (0)
 
 
 #define DEBUG_BUFFER_SIZE 256
@@ -60,8 +61,18 @@ void blink_led(void);
 /** Extern Variables*/
 extern uint32_t SystemCoreClock;
 
+typedef enum 
+{
+  CHARGING_STATE_IDLE,
+  CHARGING_STATE_CHARGING,
+  CHARGING_STATE_CHARGED,
+  CHARGING_STATE_DISCHARGING,
+  CHARGING_STATE_ERROR
+} charging_state_t;
 
+void charging_state_machine(void);
 
+#if USE_NEW_LED_LIBRARY
 void LED_Transitions_Test(void)
 {
   LED_Animation_Init(&MainLED, &LED_Controller, LED_Complete_Callback);
@@ -109,6 +120,7 @@ void LED_Transition_Test_Execute (void)
 
   LED_Transition_Update(&LEDTransition,  Get_Systick_Cnt());
 }
+#endif 
 
 
 int main(void)
@@ -128,9 +140,9 @@ int main(void)
     #else 
     PD_Initialise();
     #endif 
-    
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
+
 		
     while(1)
     {
@@ -143,7 +155,9 @@ int main(void)
         PD_RunProductControlTasks();
         last_tick = Get_Systick_Cnt();
       }
+      charging_state_machine();
       #endif 
+
 
       blink_led();
     }
@@ -160,5 +174,93 @@ void blink_led(void)
     led_state = (led_state == Bit_SET) ? Bit_RESET : Bit_SET;
     last_tick = Get_Systick_Cnt();
   }
+}
+
+static charging_state_t charging_state = CHARGING_STATE_IDLE;
+
+void charging_state_machine(void)
+{
+    static uint32_t last_tick = 0;
+    static uint32_t counter = 0;
+    static uint16_t battery = 0;
+
+    if (Get_Systick_Cnt() - last_tick > 500)
+    {
+        last_tick = Get_Systick_Cnt();
+
+        switch (charging_state)
+        {
+            case CHARGING_STATE_IDLE:
+                MCI_SetMockCablePlugged(false);
+                PD_BtnPwr_OnLongButtonPress();
+
+                counter++;
+                if (counter > 10)
+                {
+                    counter = 0;
+                    charging_state = CHARGING_STATE_CHARGING;
+                    DBG_MSG_MAIN("Charging Started, Cable Plugged\r\n");
+                    DBG_MSG_MAIN("Long Press Btn PWR\r\n");
+                }
+                break;
+
+            case CHARGING_STATE_CHARGING:
+                MCI_SetMockCablePlugged(true);
+
+                if (battery < 100)
+                {
+                    battery++;
+                }
+
+                if (battery == 100)
+                {
+                    DBG_MSG_MAIN("Charging Completed\r\n");
+                    counter++;
+                    if (counter > 10)
+                    {
+                        counter = 0;
+                        charging_state = CHARGING_STATE_DISCHARGING;
+                        DBG_MSG_MAIN("Discharging Started, Cable Unplugged\r\n");
+                    }
+                }
+                else
+                {
+                    DBG_MSG_MAIN("Battery: %d%%\r\n", battery);
+                    MCI_SetMockBatteryPercentage(battery); 
+                }
+                break;
+
+            case CHARGING_STATE_DISCHARGING:
+                MCI_SetMockCablePlugged(false);
+
+                if (battery > 0)
+                {
+                    battery--;
+
+                    if (battery == 90 || battery == 60 || battery == 40 || battery == 20)
+                    {
+                        DBG_MSG_MAIN("Btn PWR Short Press\r\n");
+                        PD_BtnPwr_OnShortButtonPress();
+                    }
+                }
+
+                if (battery == 0)
+                {
+                    charging_state = CHARGING_STATE_IDLE;
+                    DBG_MSG_MAIN("Battery Empty\r\n");
+                }
+                else
+                {
+                    DBG_MSG_MAIN("Battery: %d%%\r\n", battery);
+                    MCI_SetMockBatteryPercentage(battery); 
+                }
+                break;
+
+            default:
+                charging_state = CHARGING_STATE_ERROR;
+                DBG_MSG_MAIN("Error in Charging State\r\n");
+                break;
+        }
+    }
 }
 

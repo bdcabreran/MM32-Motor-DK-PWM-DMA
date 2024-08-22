@@ -20,6 +20,8 @@
         "common_type.h": "c",
         "led_animation.h": "c",
         "led_transition_manager.h": "c",
-        "bsp_led_pwm.h": "c"
+        "bsp_led_pwm.h": "c",
+        "mci_mock.h": "c",
+        "stdio.h": "c"
     }
 }

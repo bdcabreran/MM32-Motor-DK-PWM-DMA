@@ -1,4 +1,22 @@
 #include "mci_mock.h"
+#include "drv_uart.h"
+
+#define MOCK_DBG_ENABLE 1
+
+#if MOCK_DBG_ENABLE
+#include "drv_uart.h"
+#include "stdio.h"
+#define DEBUG_BUFFER_SIZE 256
+static int8_t debugBuffer[DEBUG_BUFFER_SIZE]; // Changed to int8_t
+static const char* TAG = "MOCK";
+
+#define MOCK_DBG_MSG(fmt, ...) do { \
+  snprintf((char*)debugBuffer, DEBUG_BUFFER_SIZE, "%s: " fmt, TAG, ##__VA_ARGS__); \
+  Uart_Put_Buff(debugBuffer, strlen((char*)debugBuffer)); \
+} while(0)
+#else
+#define MOCK_DBG_MSG(fmt, ...) do { } while(0)
+#endif
 
 // Variables to control the mock behavior
 static bool batteryPercentageInitialised = true;
@@ -55,9 +73,7 @@ void MCI_ResetFaultState(void) {
 }
 
 // Functions to set the mock behavior for testing purposes
-void MCI_SetMockBatteryPercentageInitialised(bool initialised) {
-    batteryPercentageInitialised = initialised;
-}
+
 
 void MCI_SetMockBatteryPercentage(uint8_t percentage) {
     batteryPercentage = percentage;
@@ -67,18 +83,27 @@ void MCI_SetMockBatteryDetected(bool detected) {
     batteryDetected = detected;
 }
 
-void MCI_SetMockCablePlugged(bool plugged) {
-    cablePlugged = plugged;
-}
-
-void MCI_SetMockNackedFaults(uint8_t faults) {
-    nackedFaults = faults;
-}
-
 void Buzzer_Disable(void) {
     // Mock implementation: Do nothing
 }
 
 void Buzzer_Enable(uint16_t Frequency) {
     // Mock implementation: Do nothing
+}
+
+// Setter functions for mock behavior
+
+void MCI_SetMockBatteryPercentageInitialised(bool initialised) {
+    // MOCK_DBG_MSG("Setting battery percentage initialised to %d\n", initialised);
+    batteryPercentageInitialised = initialised;
+}
+
+void MCI_SetMockCablePlugged(bool plugged) {
+    // MOCK_DBG_MSG("Setting cable plugged to %d\n", plugged);
+    cablePlugged = plugged;
+}
+
+void MCI_SetMockNackedFaults(uint8_t faults) {
+    // MOCK_DBG_MSG("Setting nacked faults to %d\n", faults);
+    nackedFaults = faults;
 }
