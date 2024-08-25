@@ -184,7 +184,7 @@ void charging_state_machine(void)
     static uint32_t counter = 0;
     static uint16_t battery = 0;
 
-    if (Get_Systick_Cnt() - last_tick > 500)
+    if (Get_Systick_Cnt() - last_tick > 200)
     {
         last_tick = Get_Systick_Cnt();
 

@@ -38,7 +38,6 @@ typedef enum
     LED_STATUS_ERROR_INVALID_ARGUMENT,       /**< Error: Invalid argument provided */
     LED_STATUS_ERROR_INVALID_VALUE,          /**< Error: Invalid value provided */
     LED_STATUS_ERROR_BUSY,                   /**< Error: LED is busy */
-    LED_STATUS_ERROR_INVALID_LED_POLARITY,   /**< Error: Invalid LED polarity */
 
     // Animation statuses
     LED_STATUS_ANIMATION_STARTED,              /**< Animation started */
@@ -49,7 +48,7 @@ typedef enum
 
 } LED_Status_t;
 
-#define IS_LED_ERROR_STATUS(status) ((status) > LED_STATUS_SUCCESS && (status) <= LED_STATUS_ERROR_INVALID_LED_POLARITY)
+#define IS_LED_ERROR_STATUS(status) ((status) > LED_STATUS_SUCCESS && (status) <= LED_STATUS_ERROR_BUSY)
 
 /** @brief Structure to represent a PWM channel. */
 typedef struct
@@ -190,7 +189,7 @@ typedef struct
 } DualColor_t;
 
 /** @brief Callback type for indicating pattern completion. */
-typedef void (*LED_Animation_Complete_Callback)(LED_Animation_Type_t animationType, LED_Status_t status);
+typedef void (*LED_Animation_Complete_Callback)(LED_Animation_Type_t animationType, LED_Status_t status, void *Animation);
 
 /** @brief Structure to represent an LED handle. */
 typedef struct

@@ -93,7 +93,7 @@ static void LED_Animation_CallCallbackIfExists(LED_Handle_t* this, LED_Status_t 
 {
     if (this->callback != NULL)
     {
-        this->callback(this->animationType, Status);
+        this->callback(this->animationType, Status, this->animationData);
     }
 }
 

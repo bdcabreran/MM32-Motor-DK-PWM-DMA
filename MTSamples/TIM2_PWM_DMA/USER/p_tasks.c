@@ -4,6 +4,7 @@
 #include "p_parameter_conversion.h"
 #include "debug_config.h"
 #include "mci_mock.h"
+#include "bsp_led_pwm.h"
 
 #define PTASK_DBG_ENABLE 1
 
@@ -25,7 +26,7 @@ static const char* TAG = "PTASK";
 
 
 // Define if you want White LED to be used, otherwise Default Color (RGY Color) will be used.
-#define USE_WHITE_LED (0)
+#define USE_WHITE_LED (1)
 
 #if defined(ENABLE_DEBUG_MODE)
 uint8_t DEBUGGER_SHORT_PRESS = 0;
@@ -1705,45 +1706,58 @@ static void PD_ProcessDebuggerCommands(void)
 /**
  * @brief  Callback function for LED animation Events.
  */
-void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status)
+void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status, void *AnimationPtr)
 {
       switch (status)
     {
     case LED_STATUS_ANIMATION_STARTED:
     DBG_MSG("LED_STATUS_ANIMATION_STARTED\n");
-      #if USE_WHITE_LED
-          // Turn off White LED
-          LED_RGYW_WHITE_OFF;
-      #endif 
+      if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
+      {
+        DBG_MSG("LED_Pulse_BatteryCharge_Mid - Animation Started\n");
+      }
+
         break;
 
     case LED_STATUS_ANIMATION_COMPLETED:
-    DBG_MSG("LED_STATUS_ANIMATION_COMPLETED\n");
-        break;
+    {
+      DBG_MSG("LED_STATUS_ANIMATION_COMPLETED\n");
+      // Once the LED animation is completed, turn on the white LED if flag is set
+      #if USE_WHITE_LED
+      if (TurnOnWhiteLEDOnCompletion)
+      {
+        TurnOnWhiteLEDOnCompletion = false;
+        DBG_MSG("Are LEDs Off? %d\n", LED_Transition_IsLEDOff(&LEDTransition));
+        DBG_MSG("Color is [0x%x] [0x%x] [0x%x]\n", LEDTransition.LedHandle->currentColor[0], LEDTransition.LedHandle->currentColor[1], LEDTransition.LedHandle->currentColor[2]);
+        LED_RGYW_WHITE_ON;
+      }
+      #endif 
+    }
+    break;
 
     case LED_STATUS_ANIMATION_STOPPED:
     DBG_MSG("LED_STATUS_ANIMATION_STOPPED\n");
         break;
 
     case LED_STATUS_ANIMATION_TRANSITION_STARTED:
-    DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\n");
+    {
+      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\n");
+      
+      if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
+      {
+        DBG_MSG("LED_Pulse_BatteryCharge_Mid - Transition Started\n");
+      }
+
       #if USE_WHITE_LED
           // Turn off White LED
           LED_RGYW_WHITE_OFF;
       #endif 
-        break;
+    }
+    break;
 
     case LED_STATUS_ANIMATION_TRANSITION_COMPLETED:
     {
       DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_COMPLETED\n");
-      // Once the LED animation is completed, turn on the white LED
-      #if USE_WHITE_LED
-      if (TurnOnWhiteLEDOnCompletion && LED_Transition_IsLEDOff(&LEDTransition))
-      {
-        TurnOnWhiteLEDOnCompletion = false;
-        LED_RGYW_WHITE_ON;
-      }
-      #endif 
     }
       break;
 

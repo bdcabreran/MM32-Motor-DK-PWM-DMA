@@ -4,14 +4,15 @@
 #define LED_TRANSITION_DBG 0
 
 #if LED_TRANSITION_DBG
-#include "drv_uart.h"
+#include "stm32l4xx_hal.h"
 #include <stdio.h>
+extern UART_HandleTypeDef huart2;
 #define LED_TRANSITION_DBG_MSG(fmt, ...)                                                                               \
     do                                                                                                                 \
     {                                                                                                                  \
         static char dbgBuff[DEBUG_BUFFER_SIZE];                                                                        \
         snprintf(dbgBuff, DEBUG_BUFFER_SIZE, (fmt), ##__VA_ARGS__);                                                    \
-        Uart_Put_Buff(dbgBuff, strlen((char*)dbgBuff)); \
+        HAL_UART_Transmit(&huart2, (uint8_t*)dbgBuff, strlen(dbgBuff), 1000);                                          \
     } while (0)
 #else
 #define LED_TRANSITION_DBG_MSG(fmt, ...)                                                                               \
@@ -172,7 +173,7 @@ static void LED_Transition_CallCallbackIfExists(LED_Transition_Handle_t* this, L
 {
     if (this->LedHandle->callback != NULL)
     {
-        this->LedHandle->callback(this->LedHandle->animationType, Status);
+        this->LedHandle->callback(this->LedHandle->animationType, Status, this->targetAnimData);
     }
 }
 
@@ -207,17 +208,18 @@ static LED_Status_t LED_Transition_StateSetup(LED_Transition_Handle_t* this, uin
     return LED_STATUS_SUCCESS;
 }
 
-bool AreColorsOff(uint8_t* colors, uint8_t colorCount)
+bool AreColorsOff(uint8_t* colors, uint8_t colorCount, uint8_t tolerance)
 {
     for (uint8_t i = 0; i < colorCount; i++)
     {
-        if (colors[i] != 0)
+        if (colors[i] > tolerance)
         {
             return false;
         }
     }
     return true;
 }
+
 
 static LED_Status_t LED_Transition_StateCompleted(LED_Transition_Handle_t* this)
 {
@@ -294,7 +296,7 @@ static LED_Status_t LED_Transition_StateOngoing(LED_Transition_Handle_t* this, u
         uint8_t color[colorCount];
         LED_Animation_GetCurrentColor(this->LedHandle, color, colorCount);
 
-        if (AreColorsOff(color, colorCount))
+        if (AreColorsOff(color, colorCount, OFF_TOLERANCE))
         {
             LED_TRANSITION_DBG_MSG("Transitioning on Off\r\n");
             LED_Transition_SetNextState(this, LED_TRANSITION_STATE_COMPLETED);
@@ -409,7 +411,7 @@ bool LED_Transition_IsLEDOff(LED_Transition_Handle_t* handle)
     uint8_t color[colorCount];
     LED_Animation_GetCurrentColor(handle->LedHandle, color, colorCount);
 
-    return AreColorsOff(color, colorCount);
+    return AreColorsOff(color, colorCount, OFF_TOLERANCE);
 }
 
 LED_Status_t LED_Transition_ToOff(LED_Transition_Handle_t* handle, LED_Transition_Type_t transitionType,

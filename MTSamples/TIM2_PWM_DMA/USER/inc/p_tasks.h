@@ -143,7 +143,7 @@ void PD_GetTouchID(uint8_t TouchID);
 
 void PD_BtnPwr_OnShortButtonPress(void);
 void PD_BtnPwr_OnLongButtonPress(void);
-void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status);
+void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status, void *AnimationPtr);
 
 
 #endif

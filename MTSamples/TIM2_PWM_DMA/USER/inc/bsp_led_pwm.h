@@ -48,8 +48,8 @@
 #define LED_RGYW_YELLOW_PIN_AF GPIO_AF_6
 
 // The White LED is not PWM controlled
-#define LED_RGYW_WHITE_PORT GPIOA
-#define LED_RGYW_WHITE_PIN GPIO_Pin_12
+#define LED_RGYW_WHITE_PORT GPIOC
+#define LED_RGYW_WHITE_PIN GPIO_Pin_10
 
 #define MCU_CLOCK (48000000UL)
 #define MCU_CLOCK_MHZ (48U)
