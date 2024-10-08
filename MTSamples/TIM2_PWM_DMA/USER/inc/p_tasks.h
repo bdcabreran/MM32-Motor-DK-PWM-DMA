@@ -54,9 +54,7 @@ typedef enum
 
   P_SLEEP, /**< Product in sleep state, can move to M_IDLE from here. */
 
-#ifdef BATT_EMPTY_AUTO_OFF_ENABLE
   P_BATT_EMPTY,
-#endif
 
   P_FAULT_NOW,
 
@@ -69,7 +67,6 @@ typedef enum
 #endif
 
 } ProductStates_t;
-
 
 typedef enum
 {

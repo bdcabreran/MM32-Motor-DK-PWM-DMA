@@ -21,12 +21,11 @@ static const char* TAG = "MOCK";
 // Variables to control the mock behavior
 static bool batteryPercentageInitialised = true;
 static uint8_t batteryPercentage = 50;
-static bool batteryDetected = true;
+static bool batteryDetected = false;
 static bool cablePlugged = false;
 static uint8_t nackedFaults = 0;
 
 MCI_Handle_t Mci;
-
 
 // Mock implementations
 
@@ -70,6 +69,15 @@ uint8_t MCI_GetNackedFaults(void) {
 void MCI_ResetFaultState(void) {
     // Mock implementation: Reset nacked faults
     nackedFaults = 0;
+}
+
+void MCI_Reset() {
+    // Mock implementation: Reset all variables
+    //batteryPercentageInitialised = true;
+    //batteryPercentage = 50;
+    //batteryDetected = true;
+    //cablePlugged = false;
+    //nackedFaults = 0;
 }
 
 // Functions to set the mock behavior for testing purposes

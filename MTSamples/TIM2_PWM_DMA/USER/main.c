@@ -34,6 +34,7 @@
 #include "bsp_led_pwm.h"
 #include "p_config.h"
 #include "p_tasks.h"
+#include "mci_mock.h"
 
 volatile bool SleepTriggered = false;
 
@@ -140,9 +141,13 @@ int main(void)
     #else 
     PD_Initialise();
     #endif 
+    MCI_SetMockBatteryDetected(true);
+    MCI_SetMockBatteryPercentageInitialised(true);
+    PD_BtnPwr_OnLongButtonPress();
+
+    Mci.BatteryDetectedReceived = true;
 
 		uint32_t last_tick = Get_Systick_Cnt(); 
-
 		
     while(1)
     {
@@ -170,35 +175,51 @@ void blink_led(void)
   static uint8_t led_state = Bit_RESET;
   if (Get_Systick_Cnt() - last_tick > 1000)
   {
-    GPIO_WriteBit(LED1_PORT, LED1_PIN, led_state);
+    GPIO_WriteBit(LED2_PORT, LED2_PIN, led_state);
+    // GPIO_WriteBit(LED_RGYW_WHITE_PORT, LED_RGYW_WHITE_PIN, led_state);
+  
     led_state = (led_state == Bit_SET) ? Bit_RESET : Bit_SET;
+    
+    // if (led_state == Bit_SET)
+    // {
+    //   DBG_MSG_MAIN("LED ON\r\n");
+    //   LED_RGYW_WHITE_ON;
+    // }
+    // else
+    // {
+    //   DBG_MSG_MAIN("LED OFF\r\n");
+    //   LED_RGYW_WHITE_OFF;
+    // }
     last_tick = Get_Systick_Cnt();
   }
 }
 
 static charging_state_t charging_state = CHARGING_STATE_IDLE;
+uint16_t battery = 0;
+
+uint32_t period_battery_change = 500;
 
 void charging_state_machine(void)
 {
     static uint32_t last_tick = 0;
     static uint32_t counter = 0;
-    static uint16_t battery = 0;
+    
 
-    if (Get_Systick_Cnt() - last_tick > 200)
+    if (Get_Systick_Cnt() - last_tick > period_battery_change)
     {
         last_tick = Get_Systick_Cnt();
 
         switch (charging_state)
         {
             case CHARGING_STATE_IDLE:
-                MCI_SetMockCablePlugged(false);
-                PD_BtnPwr_OnLongButtonPress();
+                // MCI_SetMockCablePlugged(false);
 
                 counter++;
                 if (counter > 10)
                 {
                     counter = 0;
                     charging_state = CHARGING_STATE_CHARGING;
+                    period_battery_change = 100;
                     DBG_MSG_MAIN("Charging Started, Cable Plugged\r\n");
                     DBG_MSG_MAIN("Long Press Btn PWR\r\n");
                 }
@@ -220,6 +241,7 @@ void charging_state_machine(void)
                     {
                         counter = 0;
                         charging_state = CHARGING_STATE_DISCHARGING;
+                        period_battery_change = 500;
                         DBG_MSG_MAIN("Discharging Started, Cable Unplugged\r\n");
                     }
                 }
@@ -236,17 +258,29 @@ void charging_state_machine(void)
                 if (battery > 0)
                 {
                     battery--;
+ 
+                    // if (battery == 60)
+                    // {
+                    //     DBG_MSG_MAIN("Btn PWR Long Press\r\n");
+                    //     PD_BtnPwr_OnLongButtonPress();
+                    // }
 
-                    if (battery == 90 || battery == 60 || battery == 40 || battery == 20)
+                    if (battery == 90 ||battery == 83 || battery == 65 || battery == 50 ||battery == 40 || battery == 33 ||battery == 20 || battery == 9)
                     {
                         DBG_MSG_MAIN("Btn PWR Short Press\r\n");
                         PD_BtnPwr_OnShortButtonPress();
                     }
+                    // if (battery == 20)
+                    // {
+                    //     DBG_MSG_MAIN("Btn PWR Long Press\r\n");
+                    //     PD_BtnPwr_OnLongButtonPress();
+                    // } 
                 }
 
                 if (battery == 0)
                 {
                     charging_state = CHARGING_STATE_IDLE;
+                    period_battery_change = 200;
                     DBG_MSG_MAIN("Battery Empty\r\n");
                 }
                 else

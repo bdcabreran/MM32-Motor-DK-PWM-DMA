@@ -80,6 +80,13 @@ void LED_Config_GPIO(void)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_Init(LED_RGYW_WHITE_PORT, &GPIO_InitStructure);
 
+    // Configure Simple GPIO for White LED
+    RCC_GPIO_ClockCmd(SPEED1_LED_PORT, ENABLE);
+    GPIO_InitStructure.GPIO_Pin = SPEED1_LED_PIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+    GPIO_Init(SPEED1_LED_PORT, &GPIO_InitStructure);
+
     // Configure Alternate Function for PWM
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
@@ -142,9 +149,11 @@ void LED_PWM_Start(void)
 void LED_PWM_Stop(void)
 {
     // Set PWM duty cycle to maximum to ensure the outputs are HIGH
+    
     LED_SetPWM_Red(0);    // Assuming setting to 0 effectively turns LEDs off
     LED_SetPWM_Green(0);
     LED_SetPWM_Yellow(0);
+    LED_RGYW_WHITE_OFF;
 
     // Disable the timer
     TIM_Cmd(TIM2, DISABLE);

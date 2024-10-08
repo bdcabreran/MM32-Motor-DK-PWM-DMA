@@ -77,9 +77,10 @@
 #define LED_RGYW_ERROR_FLASH_TIMES (5U)  /* Number of times to flash LED for error. */
 #define LED_RGYW_ERROR_FLASH_ON_TIME (200U)  /* (ms) On-time for LED flash sequence. */
 #define LED_RGYW_ERROR_FLASH_OFF_TIME (150U) /* (ms) Off-time for LED flash sequence. */
+#define LED_RGYW_ERROR_FLASH_INTERVAL (200U)  /* (ms) On/Off-time for LED flash sequence. */
 
-#define LED_RGYW_BATT_VERYLOW_FLASH_ON_TIME (1000U) /* (ms) */
-#define LED_RGYW_BATT_VERYLOW_FLASH_OFF_TIME (1000U) /* (ms) */
+#define LED_RGYW_BATT_VERYLOW_FLASH_ON_TIME (100U) /* (ms) */
+#define LED_RGYW_BATT_VERYLOW_FLASH_OFF_TIME (100U) /* (ms) */
 
 #define LED_RGYW_BREATH_PERIOD (5000U)      /*(ms)*/
 #define LED_RGYW_BREATH_HOLDIN_TIME (200U)  /*(ms)*/

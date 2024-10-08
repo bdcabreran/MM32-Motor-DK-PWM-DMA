@@ -56,6 +56,7 @@ static BATTLevel_State_t PreviousBatteryLevel = 99;
 BZR_States_t BuzzerStatePrev = BZR_OFF;
 static volatile uint16_t LEDFlashCounter = ((uint16_t)0);
 static volatile bool LEDFlashState = false;
+static volatile bool SendDefaultLEDCommand = true;
 
 ProductCableIn_SubStates_t CableInSubState = P_CABLEIN_IDLE;
 
@@ -75,6 +76,7 @@ uint16_t ShowBatteryLifeTimer = 0;
 int8_t SpeedMode = -1;
 
 #define LED_RGYW_INTERPOLATION_TIME_MS 300
+#define LED_RGYW_TRANSITION_IMMEDIATELY 0
 
 static void PD_ProcessDebuggerCommands(void);
 
@@ -98,6 +100,7 @@ static void PD_SetBatteryLevel(uint8_t Percentage);
 static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSendCmd);
 static void PD_SetBatteryLED_Charging(BATTLevel_State_t Level, bool ForceSendCmd);
 static void PD_RunPowerModeStateMachine(void);
+static void PD_AllLEDsOff(void);
 
 bool PD_CheckErrorCodes(void);
 void PD_RunWaitForSinglePress(void);
@@ -352,9 +355,6 @@ static int8_t PD_GetFaultIndex(uint8_t FaultCode)
   return -1;
 }
 
-/**
- * @brief  Runs product state machine.
- */
 static void PD_RunStateMachine(void)
 {
   uint16_t CMD = PD_UICommandScheduler();
@@ -421,14 +421,15 @@ static void PD_RunStateMachine(void)
           if (ChargingFinished == true)
           {
             DBG_MSG("Charging finished, Turning Off LEDs\n");
-            #if USE_NEW_LED_LIBRARY
+#if USE_NEW_LED_LIBRARY
             /* Turn off LED as charging is done. */
             LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-            #else 
+#else 
             /* Turn off LED as charging is done. */
             RGBLED_ClearBufferedCommands(&MainLED);
             RGBLED_Command_Off(&MainLED, true);
-            #endif 
+            WHITE_LED_OFF;
+#endif 
           }
           else
           {
@@ -440,30 +441,46 @@ static void PD_RunStateMachine(void)
         else
         {
           DBG_MSG("Cable not plugged, Turning Off LEDs\n");
-          #if USE_NEW_LED_LIBRARY
+#if USE_NEW_LED_LIBRARY
           /* If cable not plugged, turn off. */
           LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-          #else 
+#else 
           /* If cable not plugged, turn off. */
           RGBLED_ClearBufferedCommands(&MainLED);
           RGBLED_Command_Off(&MainLED, true);
-          #endif
+          WHITE_LED_OFF;
+#endif
         }
       }
       // not battery detected 
       else
       {
         DBG_MSG("No battery detected, Turning Off LEDs\n");
-        #if USE_NEW_LED_LIBRARY
+#if USE_NEW_LED_LIBRARY
         /* If no battery detected, turn off. */
-        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);        
-        #else 
+        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+#else 
         /* If no battery detected, turn off. */
         RGBLED_ClearBufferedCommands(&MainLED);
         RGBLED_Command_Off(&MainLED, true);
-        #endif 
+        WHITE_LED_OFF;
+#endif 
       }
     }
+
+    if (Mci.CablePluggedPrev != Mci.CablePlugged)
+    {
+      /* Reset sleep ticks whenever cable is unplugged or replugged. */
+      Product.State.Counter = SLEEP_TICKS;
+    }
+    Mci.CablePluggedPrev = Mci.CablePlugged;
+
+    if (Mci.BatteryDetectedPrev != Mci.BatteryDetected)
+    {
+      /* Reset sleep ticks whenever battery is unplugged or replugged. */
+      Product.State.Counter = SLEEP_TICKS;
+    }
+    Mci.BatteryDetectedPrev = Mci.BatteryDetected;
 
 #ifdef ENABLE_POWER_DISPLAY
     if (CMD == UI_BTN_SHORT_1 && SinglePressTimeExceeded != true)
@@ -476,8 +493,6 @@ static void PD_RunStateMachine(void)
     {
     }
 #endif
-
-
     if (CMD != UI_NO_CMD)
     {
       /* Any UI command will reset sleep timer. */
@@ -485,33 +500,45 @@ static void PD_RunStateMachine(void)
 
       if (CMD == UI_TOUCH_PWR_LONG)
       {
-#ifdef BATT_EMPTY_AUTO_OFF_ENABLE
-        if (BatteryIsEmpty == true)
+        if (PD_CheckErrorCodes() == true)
         {
+          /* Device has fault, move to fault state. */
+          Product.State = (ProductState_Handle_t){P_FAULT_NOW, Product.State.Now, 0, false};
+        }
+        else if (MCI_IsBatteryDetected() == true && BatteryIsEmpty == true)
+        {
+          /* Battery is empty, move to empty state. */
           Product.State = (ProductState_Handle_t){P_BATT_EMPTY, Product.State.Now, BATT_EMPTY_WAIT_TICKS, false};
         }
         else
-#endif
         {
           DBG_MSG("Long button press detected, moving to P_START\n");
           /* Long button press recieved. Prepare to move to P_START if requirements are met. */
           Product.State = (ProductState_Handle_t){P_START, Product.State.Now, 0, false};
         }
+        SleepTriggered = false;
         break; /* break immediately. */
       }
       else if (CMD == UI_TOUCH_PWR_SHORT)
       {
-        if (MCI_IsBatteryDetected() == true)
+        if (Mci.BatteryDetectedReceived != true)
         {
-          /* Show battery life on LED. */
-          ShowBatteryLife = true;
-          ShowBatteryLifeConfigured = false;
-
-          DBG_MSG("Short button press detected, showing battery life\n");
+          /* Not received information from motor yet, delay command to next cycle. */
+          UICommand |= UI_TOUCH_PWR_SHORT;
         }
-        else 
+        else
         {
-          DBG_MSG("Short button press detected, but no battery detected\n");
+          if (MCI_IsBatteryDetected() == true)
+          {
+            /* Show battery life on LED. */
+            ShowBatteryLife = true;
+            ShowBatteryLifeConfigured = false;
+            DBG_MSG("Short button press detected, showing battery life\n");
+          }
+          else
+          {
+            DBG_MSG("Short button press detected, but no battery detected\n");
+          }
         }
       }
     }
@@ -520,12 +547,41 @@ static void PD_RunStateMachine(void)
 #ifndef DISABLE_SLEEP_MODE
       /* No UI command, check if product should enter sleep state. */
       /* If state counter reaches zero, product goes to sleep. */
-      if (Product.State.Counter == 0 && MCI_IsCablePlugged() != true)
+      if (Product.State.Counter == 0)
       {
-        /* Go to sleep. */
-        PD_ClearAllBufferedCommands();
-        Product.State = (ProductState_Handle_t){P_SLEEP, Product.State.Now, 0, false};
-        break; /* break immediately. */
+        if (MCI_IsBatteryDetected() == true)
+        {
+          if (MCI_IsCablePlugged() == true)
+          {
+            if (ChargingFinished == true)
+            {
+              /// TODO: logic for going to sleep when battery is full should be implemented.
+              ///       would need to wake up periodically to check if trickle charge required
+              ///       and then go back to sleep after full again. ALl this would happen without 
+              ///       giving any indication to the user.
+            }
+            else
+            {
+              /* Do nothing, still charging the battery. */
+            }
+          }
+          else /* Cable not plugged. */
+          {
+            /* Go to sleep. */
+            PD_ClearAllBufferedCommands();
+            Product.State = (ProductState_Handle_t){P_SLEEP, Product.State.Now, 0, false};
+            break; /* break immediately. */
+          }
+        }
+        else /* No battery. */
+        {
+#ifndef DISABLE_SLEEP_WHEN_CABLE_PLUGGED_IN
+          /* Go to sleep. */
+          PD_ClearAllBufferedCommands();
+          Product.State = (ProductState_Handle_t){P_SLEEP, Product.State.Now, 0, false};
+          break; /* break immediately. */
+#endif
+        }
       }
 #endif
     }
@@ -534,10 +590,10 @@ static void PD_RunStateMachine(void)
 
   case P_START:
   {
-
     if (MCI_StartMotor() == true)
     {
       ShowBatteryLife = false;
+      SendDefaultLEDCommand = true;
 
 #if USE_NEW_LED_LIBRARY
       if (LED_Transition_IsLEDOff(&LEDTransition))
@@ -569,14 +625,21 @@ static void PD_RunStateMachine(void)
         {
           DBG_MSG("P_Start, Cable not plugged, Setting LED Default Color \n");
 #if USE_NEW_LED_LIBRARY
-          #if USE_WHITE_LED
-          LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-          TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
-          #else
+  #if USE_WHITE_LED
+          LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+          if (Product.BatteryLevel > BATTERY_LEVEL_1)
+          {
+            TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
+          }
+  #else
           LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-          #endif 
+  #endif 
 #else 
-          RGBLED_Command_Solid(&MainLED, &LEDSolid_DefaultColor, true);
+          RGBLED_Command_Off(&MainLED, true);
+          if (Product.BatteryLevel > BATTERY_LEVEL_1)
+          {
+            WHITE_LED_ON;
+          }
 #endif 
         }
       }
@@ -586,6 +649,9 @@ static void PD_RunStateMachine(void)
       }
 
       DBG_MSG("P_Start, Motor started, moving to P_ON\n");
+      Mci.CablePluggedPrev = Mci.CablePlugged;
+      Mci.BatteryDetectedPrev = Mci.BatteryDetected;
+
       BZR_SetOnCommand(&Buzzer, BUZZER_PWM_FREQUENCY_1, BUZZER_DEFAULT_TIMES, BUZZER_DURATION_TURN_ON_TICKS, 0);
       Product.State = (ProductState_Handle_t){P_ON, Product.State.Now, ON_TICKS, false};
     }
@@ -593,13 +659,11 @@ static void PD_RunStateMachine(void)
     {
       /* Nothing to do. */
     }
-
   }
   break;
 
   case P_ON:
   {
-    /* Can move to P_IDLE, P_CABLEIN or P_FAULT_NOW from here. */
     static bool BattLowStatePrev = false;
     bool BattLowState = false;
     uint8_t MotorFaults;
@@ -614,37 +678,23 @@ static void PD_RunStateMachine(void)
       Mci.PrevMode = SPEED_SETTING_1;
     }
 
+    if (Mci.BatteryDetectedPrev != Mci.BatteryDetected)
+    {
+      /* Battery has been removed or plugged in whilst in P_ON state, turn off. */
+      (void)MCI_StopMotor();
+      Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
+      break; /* break immediately. */
+    }
+    Mci.BatteryDetectedPrev = Mci.BatteryDetected;
+
     if (MCI_IsBatteryDetected() == true)
     {
       if (BatteryIsEmpty == true)
       {
         DBG_MSG("P_ON, Battery detected, but empty, moving to P_IDLE\n");
-        (void)MCI_StopMotor();
-
-  #ifdef BATT_EMPTY_AUTO_OFF_ENABLE
         Product.State = (ProductState_Handle_t){P_BATT_EMPTY, Product.State.Now, BATT_EMPTY_WAIT_TICKS, false};
+        (void)MCI_StopMotor();
         break; /* break immediately. */
-  #else
-        if (BattEmptyTimerStarted != true)
-        {
-          BattEmptyTimerStarted = true;
-          BattEmptyShutdownCounter = BATT_EMPTY_SHUTDOWN_TICKS;
-        }
-        else
-        {
-          if (BattEmptyShutdownCounter > 0)
-          {
-            BattEmptyShutdownCounter--;
-          }
-          else
-          {
-            /* Battery has been empty for BATT_EMPTY_SHUTDOWN_TIME,
-                go to IDLE so sleep can be triggered. */
-            Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
-            DBG_MSG("P_ON, Battery detected, but empty, moving to P_IDLE after shutdown time\n");
-          }
-        }
-  #endif
       }
     }
 
@@ -663,6 +713,38 @@ static void PD_RunStateMachine(void)
       Product.State.Counter = ON_TICKS;
     }
 
+    if (Mci.CablePluggedPrev == false)
+    {
+      if (Mci.CablePlugged == true)
+      {
+        /* Cable has been plugged during on state, turn off immediately to protect power
+           supply from overcurrent. */
+        Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
+        MCI_StopMotor();
+        break;
+      }
+    }
+
+    Mci.CablePluggedPrev = Mci.CablePlugged;
+
+    if (MCI_IsBatteryDetected() == true)
+    {
+      if (Product.BatteryLevel == BATTERY_LEVEL_1)
+      {
+        if (ShowBatteryLife == false)
+        {
+          ShowBatteryLife = true;
+          ShowBatteryLifeConfigured = false;
+        }
+
+        /* Keep the flashing time uninterrupted */
+        if (ShowBatteryLifeTimer <= BATT_DISPLAY_COUNTDOWN_TO_MINIMUM_VALUE)
+        {
+          ShowBatteryLifeTimer = BATT_DISPLAY_DURATION_TICKS;
+        }
+      }
+    }
+
     if (CMD == UI_TOUCH_PWR_LONG || Product.State.Counter == 0)
     {
       if (CMD == UI_TOUCH_PWR_LONG)
@@ -678,7 +760,7 @@ static void PD_RunStateMachine(void)
     }
     else if (CMD == UI_TOUCH_PWR_SHORT)
     {
-      if (MCI_IsBatteryDetected() == true)
+      if ((MCI_IsBatteryDetected() == true) && (Product.BatteryLevel != BATTERY_LEVEL_1))
       {
         /* Show battery life for 3 seconds. */
         ShowBatteryLife = true;
@@ -751,7 +833,7 @@ static void PD_RunStateMachine(void)
       }
     }
     break;
-    
+
     case PRODUCT_MODE_TIMER:
     {
       if (Product.TimerModeCountdown > 0)
@@ -775,42 +857,41 @@ static void PD_RunStateMachine(void)
     break;
 
     default:
-    break;
+      break;
     }
   }
   break;
 
   case P_SLEEP:
   {
-    if (MCI_IsCablePlugged() == true)
+    if (SleepTriggered == true)
     {
-      Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
+      if (CMD != UI_NO_CMD)
+      {
+        /* Force boot */
+        SleepTriggered = false;
+        UICommand |= CMD;
+        Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
+        break;
+      }
     }
     else
     {
-      if (SleepTriggered == true)
-      {
-        /* Do nothing. */
-      }
-      else
-      {
 #ifdef DISABLE_SLEEP_MODE
-        if (CMD != UI_NO_CMD)
-        {
-          /* Load another command so it can be properly dealt with in P_IDLE state. */
-          UICommand |= CMD;
-          Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
-          break;
-        }
-#else
-          SleepTriggered = true;
-#endif
+      if (CMD != UI_NO_CMD)
+      {
+        /* Load another command so it can be properly dealt with in P_IDLE state. */
+        UICommand |= CMD;
+        Product.State = (ProductState_Handle_t){P_IDLE, Product.State.Now, SLEEP_TICKS, false};
+        break;
       }
+#else
+      SleepTriggered = true;
+#endif
     }
   }
   break;
 
-#ifdef BATT_EMPTY_AUTO_OFF_ENABLE
   case P_BATT_EMPTY:
   {
 
@@ -819,18 +900,28 @@ static void PD_RunStateMachine(void)
       int8_t FlashTimes;
       uint32_t FlashWaitTime;
 
-      if (Product.State.Previous == P_ON)
+      /* Turn all LEDs off. */
+      PD_AllLEDsOff();
+
+      FlashWaitTime = BATT_EMPTY_WAIT_TIME;
+
+      #if USE_NEW_LED_LIBRARY
+
+      /* Display fault code on display. */
+      if (LED_Transition_IsBusy(&LEDTransition))
       {
-        /* Flash more times so that user can see it when they wonder why scooter not working. */
-        FlashTimes = BATT_EMPTY_FLASH_TIMES_DISCHARGE;
-        FlashWaitTime = BATT_EMPTY_WAIT_TIME_DISCHARGE;
-      }
-      else
-      {
-        FlashTimes = BATT_EMPTY_FLASH_TIMES;
-        FlashWaitTime = BATT_EMPTY_WAIT_TIME;
+        DBG_MSG("P_FAULT_NOW, LED Transition is busy, stopping\n");
+        LED_Transition_Stop(&LEDTransition);
       }
 
+      LED_Transition_ToFlash(&LEDTransition, &LED_Flash_BatteryEmpty, LED_TRANSITION_IMMINENT, 0);
+      #else 
+      FlashTimes = BATT_EMPTY_FLASH_TIMES;
+      BattEmptyFlash.Times = FlashTimes;
+      RGBLED_Command_Flash(&MainLED, &BattEmptyFlash, true);
+      #endif 
+
+      BZR_SetOnCommand(&Buzzer, BUZZER_PWM_FREQUENCY_1, BATT_EMPTY_FLASH_TIMES, BATT_EMPTY_FLASH_TICKS, BATT_EMPTY_FLASH_TICKS);
 
       Product.State.Counter = FlashWaitTime;
       Product.State.Configured = true;
@@ -842,35 +933,36 @@ static void PD_RunStateMachine(void)
     }
   }
   break;
-#endif
 
   case P_FAULT_NOW:
   {
     if (Product.State.Configured == false)
     {
-      if (Product.ErrorCodeIndex != -1)
-      {
-        DBG_MSG("P_FAULT_NOW, Showing LED Error Animation\n");
-        #if USE_NEW_LED_LIBRARY
-        
-        /* Display fault code on display. */
-        if (LED_Transition_IsBusy(&LEDTransition))
-        {
-          DBG_MSG("P_FAULT_NOW, LED Transition is busy, stopping\n");
-          LED_Transition_Stop(&LEDTransition);
-        }
+      PD_AllLEDsOff();
+      uint8_t Flashes = Product.ErrorCodeIndex + (BATT_EMPTY_FLASH_TIMES + 1); /* Start error flashes at 1 more than batt empty flashes. */
 
-        LED_Transition_ToFlash(&LEDTransition, &LED_Flash_Error, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);      
-        #else
-        /* Dispay fault code on display. */
-        RGBLED_Command_Flash(&MainLED, &LEDErrorFlash, true);
-        #endif
-      }
-      else
+      /* Set buzzer to same configuration as error flash. */
+      BZR_SetOnCommand(&Buzzer, BUZZER_PWM_FREQUENCY_1, Flashes, LED_RGYW_ERROR_FLASH_INTERVAL_TICKS, LED_RGYW_ERROR_FLASH_INTERVAL_TICKS);
+
+      DBG_MSG("P_FAULT_NOW, Showing LED Error Animation\n");
+#if USE_NEW_LED_LIBRARY
+
+      LED_Flash_Error.repeatTimes = Flashes;
+      
+      /* Display fault code on display. */
+      if (LED_Transition_IsBusy(&LEDTransition))
       {
-        /* Fault not found, move to next state. */
-        Product.State = (ProductState_Handle_t){P_FAULT_ACKNOWLEDGE, Product.State.Now, 0, false};
+        DBG_MSG("P_FAULT_NOW, LED Transition is busy, stopping\n");
+        LED_Transition_Stop(&LEDTransition);
       }
+
+      LED_Transition_ToFlash(&LEDTransition, &LED_Flash_Error, LED_TRANSITION_IMMINENT, 0);      
+#else
+      /* Dispay fault code on display. */
+      LEDErrorFlash.Times = Flashes;
+      RGBLED_Command_Flash(&MainLED, &LEDErrorFlash, true);
+#endif
+
       Product.State.Configured = true;
     }
 
@@ -897,6 +989,22 @@ static void PD_RunStateMachine(void)
     break;
   }
   }
+}
+
+static void PD_AllLEDsOff(void)
+{
+  WHITE_LED_OFF;
+  SPEED1_LED_OFF;
+  SPEED2_LED_OFF;
+  SPEED3_LED_OFF;
+  TURBOL_LED_OFF;
+
+  #if USE_NEW_LED_LIBRARY
+  LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+  #else 
+  RGBLED_Command_Off(&MainLED, true);
+  RGBLED_ClearBufferedCommands(&MainLED);
+  #endif
 }
 
 void PD_RunSpeedChangeIndication(uint8_t Index)
@@ -1048,10 +1156,14 @@ void PD_RunSpeedChangeIndication(uint8_t Index)
   Product.PrevSpeedIndex = Index;
 }
 
-bool SendDefaultLEDCommand = true;
-
 static void PD_RunPowerModeStateMachine(void)
 {
+  if (Mci.BatteryDetectedReceived != true)
+  {
+    /* Don't run state machine if not recevied battery info yet. */
+    return;
+  }
+
   if (MCI_IsBatteryDetected() == true)
   {
     if (MCI_IsCablePlugged() == true)
@@ -1094,6 +1206,20 @@ static void PD_RunPowerModeStateMachine(void)
 
       case P_CABLEIN_CHARGING:
       {
+        #if USE_NEW_LED_LIBRARY
+        if (LED_Transition_IsLEDOff(&LEDTransition))
+        {
+          /* If LED is off for any reason, force set it. */
+          PD_SetBatteryLED_Charging(Product.BatteryLevel, true);
+        }
+        #else 
+        if (MainLED.State.Now == RGBLED_OFF)
+        {
+          /* If LED is off for any reason, force set it. */
+          PD_SetBatteryLED_Charging(Product.BatteryLevel, true);
+        }
+        #endif 
+
         PD_SetBatteryLED_Charging(Product.BatteryLevel, false);
 
         if (ChargingFinished == true)
@@ -1115,15 +1241,16 @@ static void PD_RunPowerModeStateMachine(void)
           {
             /* Do nothing. */
           }
-          else 
-          { /* This will never happen as BatteryIsCharging is 
+          else
+          { /* This will never happen as BatteryIsCharging is
                hard-coded based on cable state. */
             CableInSubState = P_CABLEIN_IDLE;
-            #if USE_NEW_LED_LIBRARY
+#if USE_NEW_LED_LIBRARY
             LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-            #else
+#else
             RGBLED_Command_Off(&MainLED, false);
-            #endif 
+            WHITE_LED_OFF;
+#endif 
 
           }
         }
@@ -1161,11 +1288,12 @@ static void PD_RunPowerModeStateMachine(void)
               {
                 DBG_MSG("P_CABLEIN_FINISHED, Show Battery life time elapsed, Turning Off LED\n");
                 /* Turn back to off. */
-                #if USE_NEW_LED_LIBRARY
+#if USE_NEW_LED_LIBRARY
                 LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-                #else 
+#else 
                 RGBLED_Command_Off(&MainLED, true);
-                #endif 
+                WHITE_LED_OFF;
+#endif 
 
                 ShowBatteryLife = false;
                 BatteryFullLEDCounter = 0;
@@ -1192,6 +1320,7 @@ static void PD_RunPowerModeStateMachine(void)
                 if (MainLED.State.Now != RGBLED_OFF)
                 {
                   RGBLED_Command_Off(&MainLED, true);
+                  WHITE_LED_OFF;
                 }
                 #endif 
                 
@@ -1209,7 +1338,7 @@ static void PD_RunPowerModeStateMachine(void)
       break;
 
       default:
-      break;
+        break;
       }
     }
     else /* Cable not plugged in. */
@@ -1233,104 +1362,148 @@ static void PD_RunPowerModeStateMachine(void)
         }
         else
         {
-          if (Product.State.Now == P_ON)
+          if (Product.State.Now == P_ON || Product.State.Now == P_START)
           {
             DBG_MSG("P_CABLEIN, Cable not plugged in, Show Battery life time elapsed\n");
             DBG_MSG("P_CABLEIN, Cable not plugged in, LED display default color\n");
 #if USE_NEW_LED_LIBRARY
-            #if USE_WHITE_LED
-            LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+  #if USE_WHITE_LED
+            if (LED_Transition_IsLEDOff(&LEDTransition)) {
+              // If LED is off then transition immediately
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+            }
+            else {
+              // if LED not off then turn it off smoothly
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            }
             TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
-            #else
+  #else
             LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-            #endif 
+  #endif 
 #else 
-            RGBLED_Command_Solid(&MainLED, &LEDSolid_DefaultColor, false);
-#endif 
             /* Turn back to white. */
+            RGBLED_Command_Off(&MainLED, true);
+            WHITE_LED_ON;
+#endif 
           }
           else /*Product State is not ON */
           {
             DBG_MSG("P_CABLEIN, Cable not plugged in, Show Battery life time elapsed, Turning Off LED\n");
-            #if USE_NEW_LED_LIBRARY
+#if USE_NEW_LED_LIBRARY
             LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-            #else
+#else
             RGBLED_Command_Off(&MainLED, true);
-            #endif 
-
+            WHITE_LED_OFF;
+#endif 
           }
           ShowBatteryLife = false;
         }
       }
       else /*ShowBatteryLife == false */
       {
-        if (Product.State.Now == P_ON)
+        if (Product.State.Now == P_ON || Product.State.Now == P_START)
         {
           if (SendDefaultLEDCommand == true)
           {
             DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display default color\n");
 #if USE_NEW_LED_LIBRARY
-            #if USE_WHITE_LED
-            LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+  #if USE_WHITE_LED
+            if (LED_Transition_IsLEDOff(&LEDTransition)) {
+              // If LED is off then transition immediately
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+            }
+            else {
+              // if LED not off then turn it off smoothly
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            }
             TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
-            #else
+  #else
             LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-            #endif 
+  #endif 
 #else 
             /// TODO: calling this LED command on repeat causes MCU data in Ozone to crash
             /// Also makes MCU not be able to be flashed. Have to do a power cycle.
-            RGBLED_Command_Solid(&MainLED, &LEDSolid_DefaultColor, false);
+            RGBLED_Command_Off(&MainLED, true);
+            WHITE_LED_ON;
 #endif 
-
-
             SendDefaultLEDCommand = false;
           }
         }
         else
         {
-          #if USE_NEW_LED_LIBRARY
-          // if LED not off then turn it off
-          if (!LED_Transition_IsLEDOff(&LEDTransition))
+          if (Product.State.Now == P_BATT_EMPTY || 
+              Product.State.Now == P_FAULT_NOW || 
+              Product.State.Now == P_FAULT_ACKNOWLEDGE)
           {
-            // DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
-            LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            /* Do nothing, LED controlled from those states. */
           }
-          #else 
-          if (MainLED.State.Now != RGBLED_OFF)
+          else
           {
-            // DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
-            RGBLED_Command_Off(&MainLED, true);
+            /* In any other state, LED should be off. */
+            DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
+#if USE_NEW_LED_LIBRARY
+            // if LED not off then turn it off
+            if (!LED_Transition_IsLEDOff(&LEDTransition))
+            {
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            }
+#else 
+            if (MainLED.State.Now != RGBLED_OFF)
+            {
+              RGBLED_Command_Off(&MainLED, true);
+              WHITE_LED_OFF;
+            }
+#endif 
           }
-          #endif 
-
         }
       }
     }
   }
   else /* No battery detected. */
   {
+    CableInSubState = P_CABLEIN_IDLE;
+    BatteryIsCharging = false;
     if (Product.State.Now == P_ON)
     {
-
-      /// TODO: can't call this constantly as MCU becomes un-flashable
-      /// have to rely on the command set in P_START for now.
-
 #if USE_NEW_LED_LIBRARY
-      // Note: This transition is commented out due to the MCU becoming un-flashable, 
-      #if !USE_WHITE_LED
-      //LED_Transition_ToSolid(&LEDTransition, &LED_Solid_DefaultColor, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-      #endif 
+  #if USE_WHITE_LED
+      LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+      TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
+  #endif 
 #else 
-      // RGBLED_Command_Solid(&MainLED, &LEDSolid_DefaultColor, false);
+      RGBLED_Command_Off(&MainLED, true);
+      WHITE_LED_ON;
 #endif
 
     }
     else
     {
-      /* Do nothing. */
+      if (Product.State.Now == P_IDLE)
+      {
+        /* Turn RGB LED off. 
+           This situation can occur if battery was charging and 
+           then the battery is removed. */
+        #if USE_NEW_LED_LIBRARY
+
+        if (!LED_Transition_IsLEDOff(&LEDTransition))
+        {
+          LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+        }
+        
+        #else 
+        if (MainLED.State.Now != RGBLED_OFF)
+        {
+          /// TODO: calling this LED command on repeat causes MCU data in Ozone to crash
+          /// Also makes MCU not be able to be flashed. Have to do a power cycle.
+          RGBLED_Command_Off(&MainLED, true);
+          WHITE_LED_OFF;
+        }
+        #endif 
+      }
     }
   }
 }
+
 
 void PD_RunWaitForSinglePress(void)
 {
@@ -1476,65 +1649,75 @@ static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSend
   /* If level has changed or force is set to true, update LED command. */
   if (PreviousBatteryLevel != Level || ForceSendCmd == true)
   {
+    WHITE_LED_OFF;
     switch (Level)
     {
-      case BATTERY_LEVEL_1:
+    case BATTERY_LEVEL_EMPTY:
+    case BATTERY_LEVEL_1:
+    {
+#if USE_NEW_LED_LIBRARY
+      /* Display fault code on display. */
+      if (LED_Transition_IsBusy(&LEDTransition))
       {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToFlash(&LEDTransition, &LED_Flash_BatteryVeryLow, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-        #else 
-        RGBLED_Command_Flash(&MainLED, &LEDFlash_BatteryVeryLow, false);
-        #endif 
+        DBG_MSG("P_FAULT_NOW, LED Transition is busy, stopping\n");
+        LED_Transition_Stop(&LEDTransition);
       }
-      break;
-      
-      case BATTERY_LEVEL_2:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryLow, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-        #else 
-        RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryLow, false);
-        #endif 
 
-      }
-      break;
-      
-      case BATTERY_LEVEL_3:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryMid, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-        #else 
-        RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryMid, false);
-        #endif         
-      }
-      break;
-      
-      case BATTERY_LEVEL_4:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryHigh, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-        #else 
-        RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryHigh, false);
-        #endif 
-      }
-      break;
+      LED_Transition_ToFlash(&LEDTransition, &LED_Flash_BatteryVeryLow, LED_TRANSITION_IMMINENT, 0);
+#else 
+      RGBLED_Command_Flash(&MainLED, &LEDFlash_BatteryVeryLow, false);
+#endif 
+    }
+    break;
+    
+    case BATTERY_LEVEL_2:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryLow, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+#else 
+      RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryLow, false);
+#endif 
 
-      case BATTERY_LEVEL_FULL:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryHigh, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
-        #else 
-        RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryHigh, false);
-        #endif 
-      }
-      break;
+    }
+    break;
+    
+    case BATTERY_LEVEL_3:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryMid, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+#else 
+      RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryMid, false);
+#endif         
+    }
+    break;
+    
+    case BATTERY_LEVEL_4:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryHigh, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+#else 
+      RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryHigh, false);
+#endif 
+    }
+    break;
 
-      default:
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS); // Turn off LED.
-        #else 
-        RGBLED_Command_Off(&MainLED, true);
-        #endif 
+    case BATTERY_LEVEL_FULL:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ToSolid(&LEDTransition, &LED_Solid_BatteryHigh, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+#else 
+      RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryHigh, false);
+#endif 
+    }
+    break;
+
+    default:
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS); // Turn off LED.
+#else 
+      RGBLED_Command_Off(&MainLED, true);
+      WHITE_LED_OFF;
+#endif 
 
       break;
     }
@@ -1546,7 +1729,6 @@ static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSend
 
   PreviousBatteryLevel = Level;
 }
-
 /* Note: Since breath effect is a smooth light transition, we never have Force = true 
    for the RGBLED_Command_Breath() function call. This ensures that when the battery level 
    changes, the breath color transition only happens when the LED is off. */
@@ -1712,10 +1894,10 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
     {
     case LED_STATUS_ANIMATION_STARTED:
     DBG_MSG("LED_STATUS_ANIMATION_STARTED\n");
-      if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
-      {
-        DBG_MSG("LED_Pulse_BatteryCharge_Mid - Animation Started\n");
-      }
+      // if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
+      // {
+      //   DBG_MSG("LED_Pulse_BatteryCharge_Mid - Animation Started\n");
+      // }
 
         break;
 
@@ -1727,8 +1909,8 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
       if (TurnOnWhiteLEDOnCompletion)
       {
         TurnOnWhiteLEDOnCompletion = false;
-        DBG_MSG("Are LEDs Off? %d\n", LED_Transition_IsLEDOff(&LEDTransition));
-        DBG_MSG("Color is [0x%x] [0x%x] [0x%x]\n", LEDTransition.LedHandle->currentColor[0], LEDTransition.LedHandle->currentColor[1], LEDTransition.LedHandle->currentColor[2]);
+        //DBG_MSG("Are LEDs Off? %d\n", LED_Transition_IsLEDOff(&LEDTransition));
+        //DBG_MSG("Color is [0x%x] [0x%x] [0x%x]\n", LEDTransition.LedHandle->currentColor[0], LEDTransition.LedHandle->currentColor[1], LEDTransition.LedHandle->currentColor[2]);
         LED_RGYW_WHITE_ON;
       }
       #endif 
@@ -1743,10 +1925,10 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
     {
       DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\n");
       
-      if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
-      {
-        DBG_MSG("LED_Pulse_BatteryCharge_Mid - Transition Started\n");
-      }
+      // if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
+      // {
+      //   DBG_MSG("LED_Pulse_BatteryCharge_Mid - Transition Started\n");
+      // }
 
       #if USE_WHITE_LED
           // Turn off White LED

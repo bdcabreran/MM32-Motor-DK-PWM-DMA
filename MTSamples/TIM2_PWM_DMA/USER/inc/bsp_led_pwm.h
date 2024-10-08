@@ -51,6 +51,10 @@
 #define LED_RGYW_WHITE_PORT GPIOC
 #define LED_RGYW_WHITE_PIN GPIO_Pin_10
 
+// Speed 1 LED 
+#define SPEED1_LED_PORT GPIOD
+#define SPEED1_LED_PIN GPIO_Pin_4
+
 #define MCU_CLOCK (48000000UL)
 #define MCU_CLOCK_MHZ (48U)
 #define LED_RGYW_PWM_FREQUENCY (1000U)       /* (Hz) PWM frequency for LED control. */

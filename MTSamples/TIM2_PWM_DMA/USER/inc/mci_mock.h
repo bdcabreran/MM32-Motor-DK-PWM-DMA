@@ -29,13 +29,14 @@ typedef struct
   bool FirstSOCDataReceived;
   uint8_t NackedFaults;
   uint8_t AllFaults;
-
   bool SendFaultAck;
 
   bool CablePlugged;
+  bool CablePluggedPrev;
 
   bool BatteryDetected;
-
+  bool BatteryDetectedPrev;
+  bool BatteryDetectedReceived;
   // Transaction IDs for messages
   int8_t MotorOnTransactionId;
   int8_t MotorModeTransactionId;
@@ -64,6 +65,7 @@ bool MCI_StartMotor(void);
 void MCI_SetSpeedSetting(uint8_t SpeedSetting);
 uint8_t MCI_GetNackedFaults(void);
 void MCI_ResetFaultState(void);
+void MCI_Reset();
 
 void Buzzer_Disable(void);
 void Buzzer_Enable(uint16_t Frequency);

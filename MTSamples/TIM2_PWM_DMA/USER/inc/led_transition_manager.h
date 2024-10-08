@@ -17,7 +17,7 @@
 #define DEFAULT_TRANSITION_CLEAN_ENTRY_TIMEOUT_MS 2000
 #define DEFAULT_TRANSITION_UPON_COMPLETION_TIMEOUT_MS 5000
 #define DEFAULT_TRANSITION_INTERPOLATE_TIME_MS 200
-#define OFF_TOLERANCE (0x0) // Tolerance for off state, interpolation not perfect
+#define OFF_TOLERANCE (0x3) // Tolerance for off state, interpolation not perfect
 
 /**
  * @brief Enum for different types of LED transitions.
