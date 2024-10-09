@@ -247,13 +247,15 @@ static void PD_RunSubsystem_RGBLED(void)
   }
 }
 
-void PD_BtnPwr_OnShortButtonPress(void)
+static void PD_BtnPwr_OnShortButtonPress(void)
 {
+  DBG_MSG("Power button short press.\n");
   UICommand |= UI_TOUCH_PWR_SHORT;
 }
 
-void PD_BtnPwr_OnLongButtonPress(void)
+static void PD_BtnPwr_OnLongButtonPress(void)
 {
+  DBG_MSG("Power button long press.\n");
   UICommand |= UI_TOUCH_PWR_LONG;
 }
 
@@ -1590,6 +1592,8 @@ void PD_ProcessTouchButtons(void)
   bool BtnSpeed2Pressed = false;
   bool BtnSpeed3Pressed = false;
   bool BtnTurboPressed = false;
+
+  BtnPwrPressed = !GPIO_ReadInputDataBit(POWER_BUTTON_PORT, POWER_BUTTON_PIN);
 
   switch (Product.TouchID)
   {

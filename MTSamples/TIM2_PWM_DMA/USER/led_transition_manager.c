@@ -294,13 +294,13 @@ static LED_Status_t LED_Transition_StateOngoing(LED_Transition_Handle_t* this, u
         {
             LED_TRANSITION_DBG_MSG("Interpolation Completed\r\n");
 
-            // Interpolation sometimes does not reach the target color exactly
-            if (LED_Animation_CheckAndForceColorMatch(this->LedHandle, this->targetColor)) {
-                LED_TRANSITION_DBG_MSG("Colors successfully transitioned.\r\n");
-            }
-            else {
-                LED_TRANSITION_DBG_MSG("Colors forced to target.\r\n");
-            }
+            // // Interpolation sometimes does not reach the target color exactly
+            // if (LED_Animation_CheckAndForceColorMatch(this->LedHandle, this->targetColor)) {
+            //     LED_TRANSITION_DBG_MSG("Colors successfully transitioned.\r\n");
+            // }
+            // else {
+            //     LED_TRANSITION_DBG_MSG("Colors forced to target.\r\n");
+            // }
 
             // Transition to idle state
             LED_Transition_SetNextState(this, LED_TRANSITION_STATE_COMPLETED);
