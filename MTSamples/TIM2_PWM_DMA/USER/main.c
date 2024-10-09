@@ -123,6 +123,91 @@ void LED_Transition_Test_Execute (void)
 }
 #endif 
 
+// Constants for debounce time and press durations (in milliseconds)
+#define DEBOUNCE_TIME_MS 50
+#define SHORT_PRESS_TIME_MS 350
+#define LONG_PRESS_TIME_MS 800
+
+// Variables to track button press state
+static uint32_t button_press_start_time = 0;
+static uint32_t last_button_check_time = 0;
+static bool button_was_pressed = false;
+
+// Function prototypes for short and long press callbacks
+void on_short_press();
+void on_long_press();
+
+int is_power_btn_pressed_debounce(void)
+{
+    uint32_t current_time = Get_Systick_Cnt();
+
+    // Check if sufficient time has passed since the last button state check
+    if (current_time - last_button_check_time < DEBOUNCE_TIME_MS)
+    {
+        return 0;  // Debouncing, don't process button press yet
+    }
+
+    last_button_check_time = current_time;
+
+    int button_pressed = is_power_btn_pressed();  // Read the actual button state
+
+    if (button_pressed && !button_was_pressed)
+    {
+        // Button has just been pressed
+        button_press_start_time = current_time;
+        button_was_pressed = true;
+    }
+    else if (!button_pressed && button_was_pressed)
+    {
+        // Button has just been released
+        uint32_t press_duration = current_time - button_press_start_time;
+        button_was_pressed = false;
+
+        if (press_duration >= LONG_PRESS_TIME_MS)
+        {
+            on_long_press();  // Long press detected
+        }
+        else if (press_duration >= SHORT_PRESS_TIME_MS)
+        {
+            on_short_press();  // Short press detected
+        }
+    }
+
+    return button_pressed;
+}
+
+void on_short_press()
+{
+    DBG_MSG_MAIN("Short press detected.\r\n");
+    // Add your short press handling logic here
+    PD_BtnPwr_OnShortButtonPress();  // Example callback function
+}
+
+void on_long_press()
+{
+    DBG_MSG_MAIN("Long press detected.\r\n");
+    // Add your long press handling logic here
+    PD_BtnPwr_OnLongButtonPress();  // Example callback function
+}
+
+
+void board_power_btn_init()
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_StructInit(&GPIO_InitStructure);
+    RCC_AHBPeriphClockCmd(LED_RCC_CLOCKGPIO, ENABLE);
+
+    GPIO_InitStructure.GPIO_Pin     =  POWER_BUTTON_PIN;
+    GPIO_InitStructure.GPIO_Speed   = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Mode    = GPIO_Mode_IPU;
+    GPIO_Init(POWER_BUTTON_PORT, &GPIO_InitStructure);
+
+}
+
+int is_power_btn_pressed()
+{
+    return !GPIO_ReadInputDataBit(POWER_BUTTON_PORT, POWER_BUTTON_PIN);
+}
 
 int main(void)
 {
@@ -130,6 +215,8 @@ int main(void)
     Board_Gpio_Af_Init();
     Drv_Uart_Init(115200);
     Board_Gpio_Init();
+    board_power_btn_init();
+
 
     DBG_MSG_MAIN("MCU Frequency: %d Hz\r\n", SystemCoreClock);		
 
@@ -143,7 +230,6 @@ int main(void)
     #endif 
     MCI_SetMockBatteryDetected(true);
     MCI_SetMockBatteryPercentageInitialised(true);
-    PD_BtnPwr_OnLongButtonPress();
 
     Mci.BatteryDetectedReceived = true;
 
@@ -163,6 +249,7 @@ int main(void)
       charging_state_machine();
       #endif 
 
+      // is_power_btn_pressed_debounce();
 
       blink_led();
     }
@@ -219,7 +306,7 @@ void charging_state_machine(void)
                 {
                     counter = 0;
                     charging_state = CHARGING_STATE_CHARGING;
-                    period_battery_change = 100;
+                    period_battery_change = 200;
                     DBG_MSG_MAIN("Charging Started, Cable Plugged\r\n");
                     DBG_MSG_MAIN("Long Press Btn PWR\r\n");
                 }
@@ -241,7 +328,7 @@ void charging_state_machine(void)
                     {
                         counter = 0;
                         charging_state = CHARGING_STATE_DISCHARGING;
-                        period_battery_change = 500;
+                        period_battery_change = 1000;
                         DBG_MSG_MAIN("Discharging Started, Cable Unplugged\r\n");
                     }
                 }
@@ -255,7 +342,7 @@ void charging_state_machine(void)
             case CHARGING_STATE_DISCHARGING:
                 MCI_SetMockCablePlugged(false);
 
-                if (battery > 0)
+                if (battery > 30)
                 {
                     battery--;
  
@@ -265,11 +352,12 @@ void charging_state_machine(void)
                     //     PD_BtnPwr_OnLongButtonPress();
                     // }
 
-                    if (battery == 90 ||battery == 83 || battery == 65 || battery == 50 ||battery == 40 || battery == 33 ||battery == 20 || battery == 9)
-                    {
-                        DBG_MSG_MAIN("Btn PWR Short Press\r\n");
-                        PD_BtnPwr_OnShortButtonPress();
-                    }
+                    // if (battery == 90 ||battery == 83 || battery == 65 || battery == 50 ||battery == 40 || battery == 33 ||battery == 20 || battery == 9)
+                    // {
+                    //     DBG_MSG_MAIN("Btn PWR Short Press\r\n");
+                    //     PD_BtnPwr_OnShortButtonPress();
+                    // }
+
                     // if (battery == 20)
                     // {
                     //     DBG_MSG_MAIN("Btn PWR Long Press\r\n");

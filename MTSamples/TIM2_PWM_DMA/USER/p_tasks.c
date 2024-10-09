@@ -9,15 +9,15 @@
 #define PTASK_DBG_ENABLE 1
 
 #if PTASK_DBG_ENABLE
-#include "drv_uart.h"
-#include "stdio.h"
+
 #define DEBUG_BUFFER_SIZE 256
-static int8_t debugBuffer[DEBUG_BUFFER_SIZE]; // Changed to int8_t
+static char debugBuffer[DEBUG_BUFFER_SIZE];
 static const char* TAG = "PTASK";
 
 #define DBG_MSG(fmt, ...) do { \
-  snprintf((char*)debugBuffer, DEBUG_BUFFER_SIZE, "%s: " fmt, TAG, ##__VA_ARGS__); \
-  Uart_Put_Buff(debugBuffer, strlen((char*)debugBuffer)); \
+  uint32_t timestemp = Get_Systick_Cnt(); \
+  snprintf(debugBuffer, DEBUG_BUFFER_SIZE, "(%d)%s: " fmt, timestemp, TAG, ##__VA_ARGS__); \
+  Uart_Put_Buff(debugBuffer, strlen(debugBuffer)); \
 } while(0)
 #else
 #define DBG_MSG(fmt, ...) do { } while(0)
@@ -109,6 +109,10 @@ static uint16_t PD_UICommandScheduler(void);
 
 static void PD_ClearAllBufferedCommands(void);
 
+#if USE_NEW_LED_LIBRARY
+//void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t status, void *AnimationPtr);
+#endif
+
 void PD_Initialise(void)
 {
   Product.InitComplete = false;
@@ -136,7 +140,7 @@ void PD_Initialise(void)
   DETSW_Init(&DCInDetectSwitch);
 
 #if USE_NEW_LED_LIBRARY
-  DBG_MSG("Using new LED library.\n");
+  DBG_MSG("Using new LED library 10/09/2024.\n");
   // LED Complete Callback is optional and can be used to trigger other events when LED animations are complete.
   LED_Animation_Init(&MainLED, &LED_Controller, LED_Complete_Callback);
   LED_Transition_Init(&LEDTransition, &MainLED);
@@ -191,7 +195,7 @@ static void PD_RunBuzzer(void)
 {
   BZR_ReturnData_t BuzzerCommand;
   BZR_Run(&Buzzer, &BuzzerCommand);
-  
+
   if (BuzzerStatePrev != BuzzerCommand.State)
   {
     if (BuzzerCommand.State == BZR_ON)
@@ -222,7 +226,6 @@ static void PD_UserInput(void)
   // MCI_IsCablePlugged() = DETSW_Update(&DCInDetectSwitch, IsDCInHigh);
 
   PD_ProcessDebuggerCommands();
-
 }
 
 static void PD_RunSubsystem_RGBLED(void)
@@ -305,26 +308,26 @@ static void PD_ClearAllBufferedCommands(void)
 /// TODO: this might be better moved to product core.
 static uint16_t PD_UICommandScheduler(void)
 {
-    /* Only look for commands if there are any. */
-    if (UICommand != 0x00)
+  /* Only look for commands if there are any. */
+  if (UICommand != 0x00)
+  {
+    for (uint16_t b = 0x0001; b <= 0x8000; b <<= 1)
     {
-        for (uint16_t b = 0x0001; b <= 0x8000; b <<= 1)
-        {
-            if (UICommand & b)
-            {
-                /* UI command found. */
+      if (UICommand & b)
+      {
+        /* UI command found. */
 
-                /* Acknowledge that UI Command has been received. */
-                UICommand &= ~b;
+        /* Acknowledge that UI Command has been received. */
+        UICommand &= ~b;
 
-                /* Return immediately once the first UI command bit has been found. */
-                return b;
-            }
-        }
+        /* Return immediately once the first UI command bit has been found. */
+        return b;
+      }
     }
+  }
 
-    /* No command found. */
-    return 0x0000;
+  /* No command found. */
+  return 0x0000;
 }
 
 static int8_t PD_GetFaultIndex(uint8_t FaultCode)
@@ -355,6 +358,9 @@ static int8_t PD_GetFaultIndex(uint8_t FaultCode)
   return -1;
 }
 
+/**
+ * @brief  Runs product state machine.
+ */
 static void PD_RunStateMachine(void)
 {
   uint16_t CMD = PD_UICommandScheduler();
@@ -423,7 +429,10 @@ static void PD_RunStateMachine(void)
             DBG_MSG("Charging finished, Turning Off LEDs\n");
 #if USE_NEW_LED_LIBRARY
             /* Turn off LED as charging is done. */
-            LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+            {
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            }
 #else 
             /* Turn off LED as charging is done. */
             RGBLED_ClearBufferedCommands(&MainLED);
@@ -443,7 +452,10 @@ static void PD_RunStateMachine(void)
           DBG_MSG("Cable not plugged, Turning Off LEDs\n");
 #if USE_NEW_LED_LIBRARY
           /* If cable not plugged, turn off. */
-          LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+          if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+          {
+            LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+          }
 #else 
           /* If cable not plugged, turn off. */
           RGBLED_ClearBufferedCommands(&MainLED);
@@ -457,8 +469,11 @@ static void PD_RunStateMachine(void)
       {
         DBG_MSG("No battery detected, Turning Off LEDs\n");
 #if USE_NEW_LED_LIBRARY
-        /* If no battery detected, turn off. */
-        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+      /* If no battery detected, turn off. */
+      if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+      {
+        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS); // Turn off LED.
+      }
 #else 
         /* If no battery detected, turn off. */
         RGBLED_ClearBufferedCommands(&MainLED);
@@ -626,7 +641,11 @@ static void PD_RunStateMachine(void)
           DBG_MSG("P_Start, Cable not plugged, Setting LED Default Color \n");
 #if USE_NEW_LED_LIBRARY
   #if USE_WHITE_LED
-          LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+          if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+          {
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+          }
+
           if (Product.BatteryLevel > BATTERY_LEVEL_1)
           {
             TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
@@ -1000,7 +1019,10 @@ static void PD_AllLEDsOff(void)
   TURBOL_LED_OFF;
 
   #if USE_NEW_LED_LIBRARY
-  LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+  if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+  {
+    LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+  }
   #else 
   RGBLED_Command_Off(&MainLED, true);
   RGBLED_ClearBufferedCommands(&MainLED);
@@ -1050,13 +1072,13 @@ void PD_RunSpeedChangeIndication(uint8_t Index)
       TURBOL_LED_ON;
     }
     break;
-    
+
     default:
-    break;
+      break;
     }
   }
   break;
-  
+
   case PRODUCT_MODE_TIMER:
   {
     if (LEDFlashCounter > 0)
@@ -1141,16 +1163,15 @@ void PD_RunSpeedChangeIndication(uint8_t Index)
       }
     }
     break;
-    
-    default:
-    break;
-    }
 
+    default:
+      break;
+    }
   }
   break;
 
   default:
-  break;
+    break;
   }
 
   Product.PrevSpeedIndex = Index;
@@ -1246,7 +1267,11 @@ static void PD_RunPowerModeStateMachine(void)
                hard-coded based on cable state. */
             CableInSubState = P_CABLEIN_IDLE;
 #if USE_NEW_LED_LIBRARY
-            LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            // transition to off if not already off
+            if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+            {
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            }
 #else
             RGBLED_Command_Off(&MainLED, false);
             WHITE_LED_OFF;
@@ -1289,7 +1314,11 @@ static void PD_RunPowerModeStateMachine(void)
                 DBG_MSG("P_CABLEIN_FINISHED, Show Battery life time elapsed, Turning Off LED\n");
                 /* Turn back to off. */
 #if USE_NEW_LED_LIBRARY
-                LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+                if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+                {
+                  LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+
+                }
 #else 
                 RGBLED_Command_Off(&MainLED, true);
                 WHITE_LED_OFF;
@@ -1311,7 +1340,7 @@ static void PD_RunPowerModeStateMachine(void)
                 DBG_MSG("P_CABLEIN_FINISHED, Battery Full LED time elapsed, Turning Off LED\n");
                 #if USE_NEW_LED_LIBRARY
                 /* Turn it off. */
-                if (!LED_Transition_IsLEDOff(&LEDTransition))
+                if (LED_Transition_IsLEDOff(&LEDTransition) == false)
                 {
                   LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
                 }
@@ -1368,12 +1397,10 @@ static void PD_RunPowerModeStateMachine(void)
             DBG_MSG("P_CABLEIN, Cable not plugged in, LED display default color\n");
 #if USE_NEW_LED_LIBRARY
   #if USE_WHITE_LED
-            if (LED_Transition_IsLEDOff(&LEDTransition)) {
-              // If LED is off then transition immediately
-              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
-            }
-            else {
-              // if LED not off then turn it off smoothly
+
+            // if LED not off then turn it off 
+            if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+            {
               LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
             }
             TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
@@ -1390,7 +1417,11 @@ static void PD_RunPowerModeStateMachine(void)
           {
             DBG_MSG("P_CABLEIN, Cable not plugged in, Show Battery life time elapsed, Turning Off LED\n");
 #if USE_NEW_LED_LIBRARY
-            LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+
+            if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+            {
+              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
+            }
 #else
             RGBLED_Command_Off(&MainLED, true);
             WHITE_LED_OFF;
@@ -1408,12 +1439,8 @@ static void PD_RunPowerModeStateMachine(void)
             DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display default color\n");
 #if USE_NEW_LED_LIBRARY
   #if USE_WHITE_LED
-            if (LED_Transition_IsLEDOff(&LEDTransition)) {
-              // If LED is off then transition immediately
-              LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
-            }
-            else {
-              // if LED not off then turn it off smoothly
+            if (LED_Transition_IsLEDOff(&LEDTransition) == false) 
+            {
               LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
             }
             TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
@@ -1440,10 +1467,10 @@ static void PD_RunPowerModeStateMachine(void)
           else
           {
             /* In any other state, LED should be off. */
-            DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
+            // DBG_MSG("P_CABLEIN, Cable not plugged in, ShowBatteryLife false,  LED display off\n");
 #if USE_NEW_LED_LIBRARY
             // if LED not off then turn it off
-            if (!LED_Transition_IsLEDOff(&LEDTransition))
+            if (LED_Transition_IsLEDOff(&LEDTransition) == false)
             {
               LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS);
             }
@@ -1467,7 +1494,10 @@ static void PD_RunPowerModeStateMachine(void)
     {
 #if USE_NEW_LED_LIBRARY
   #if USE_WHITE_LED
-      LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+      if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+      {
+        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_IMMINENT, 0);
+      }
       TurnOnWhiteLEDOnCompletion = true; // handled on LED Callback
   #endif 
 #else 
@@ -1504,7 +1534,6 @@ static void PD_RunPowerModeStateMachine(void)
   }
 }
 
-
 void PD_RunWaitForSinglePress(void)
 {
   if (WaitForSinglePressTimeout > 1)
@@ -1525,6 +1554,10 @@ void PD_RunWaitForSinglePress(void)
 void PD_UpdateCommunicationFaultStatus(bool IsFault)
 {
   CommunicationFaultOccurred = IsFault;
+  if (CommunicationFaultOccurred == true)
+  {
+    MCI_Reset();
+  }
 }
 
 bool PD_CheckErrorCodes(void)
@@ -1589,7 +1622,7 @@ void PD_ProcessTouchButtons(void)
     BtnTurboPressed = true;
   }
   break;
-  
+
   default:
     break;
   }
@@ -1610,7 +1643,7 @@ void PD_GetTouchID(uint8_t TouchID)
 static void PD_SetBatteryLevel(uint8_t Percentage)
 {
   BATTLevel_State_t Level;
-  
+
   if (Percentage == 0)
   {
     Level = BATTERY_LEVEL_EMPTY;
@@ -1639,9 +1672,9 @@ static void PD_SetBatteryLevel(uint8_t Percentage)
   Product.BatteryLevel = Level;
 }
 
-/* Note: since all states are either solid or flashing, we could set Force = true 
-   or Force = false for all of the RGBLED function calls. This is because the LED is 
-   either on or off so the transition can be forced between each state. However, setting 
+/* Note: since all states are either solid or flashing, we could set Force = true
+   or Force = false for all of the RGBLED function calls. This is because the LED is
+   either on or off so the transition can be forced between each state. However, setting
    Force = false is likely better as if there is an LED error flash occuring, it will wait
    until this is finished before starting the new LED command. */
 static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSendCmd)
@@ -1713,7 +1746,10 @@ static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSend
 
     default:
 #if USE_NEW_LED_LIBRARY
-      LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS); // Turn off LED.
+      if (LED_Transition_IsLEDOff(&LEDTransition) == false)
+      {
+        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS); // Turn off LED.
+      }
 #else 
       RGBLED_Command_Off(&MainLED, true);
       WHITE_LED_OFF;
@@ -1729,74 +1765,81 @@ static void PD_SetBatteryLED_Discharging(BATTLevel_State_t Level, bool ForceSend
 
   PreviousBatteryLevel = Level;
 }
-/* Note: Since breath effect is a smooth light transition, we never have Force = true 
-   for the RGBLED_Command_Breath() function call. This ensures that when the battery level 
+
+/* Note: Since breath effect is a smooth light transition, we never have Force = true
+   for the RGBLED_Command_Breath() function call. This ensures that when the battery level
    changes, the breath color transition only happens when the LED is off. */
 static void PD_SetBatteryLED_Charging(BATTLevel_State_t Level, bool ForceSendCmd)
 {
   /* If level has changed or force is set to true, update LED command. */
   if (PreviousBatteryLevel != Level || ForceSendCmd == true)
-  {  
+  {
+    WHITE_LED_OFF;
     switch (Level)
     {
-      case BATTERY_LEVEL_1:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_LowAndVeryLow, LED_ANIMATION_TYPE_PULSE);
-        #else 
-        RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_LowandVeryLow, false);
-        #endif
-      }
-      break;
-      
-      case BATTERY_LEVEL_2:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_LowAndVeryLow, LED_ANIMATION_TYPE_PULSE);
-        #else 
-        RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_LowandVeryLow, false);
-        #endif        
-      }
-      break;
-      
-      case BATTERY_LEVEL_3:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_Mid, LED_ANIMATION_TYPE_PULSE);
-        #else 
-        RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_Mid, false);        
-        #endif        
+    case BATTERY_LEVEL_EMPTY:
+    case BATTERY_LEVEL_1:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_LowAndVeryLow, LED_ANIMATION_TYPE_PULSE);
+#else 
+      RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_LowandVeryLow, true);
+#endif
+    }
+    break;
+    
+    case BATTERY_LEVEL_2:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_LowAndVeryLow, LED_ANIMATION_TYPE_PULSE);
+#else 
+      RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_LowandVeryLow, true);
+#endif        
+    }
+    break;
+    
+    case BATTERY_LEVEL_3:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_Mid, LED_ANIMATION_TYPE_PULSE);
+#else 
+      RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_Mid, true);
+#endif        
 
-      }
-      break;
-      
-      case BATTERY_LEVEL_4:
+    }
+    break;
+    
+    case BATTERY_LEVEL_4:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_High, LED_ANIMATION_TYPE_PULSE);
+#else 
+      RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_High, true);      
+#endif        
+
+    }
+    break;
+
+    case BATTERY_LEVEL_FULL:
+    {
+#if USE_NEW_LED_LIBRARY
+      LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Solid_BatteryHigh, LED_ANIMATION_TYPE_SOLID);
+#else 
+      RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryHigh, true);
+#endif        
+    }
+    break;
+
+    default:
+#if USE_NEW_LED_LIBRARY
+      if (LED_Transition_IsLEDOff(&LEDTransition) == false)
       {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Pulse_BatteryCharge_High, LED_ANIMATION_TYPE_PULSE);
-        #else 
-        RGBLED_Command_Breath(&MainLED, &LEDBatteryChargeBreath_High, false);      
-        #endif        
-
+        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS); // Turn off LED.
       }
-      break;
-
-      case BATTERY_LEVEL_FULL:
-      {
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ExecuteWithMap(&LEDTransition, &LED_Solid_BatteryHigh, LED_ANIMATION_TYPE_SOLID);
-        #else 
-        RGBLED_Command_Solid(&MainLED, &LEDSolid_BatteryHigh, false);
-        #endif        
-      }
-      break;
-
-      default:
-        #if USE_NEW_LED_LIBRARY
-        LED_Transition_ToOff(&LEDTransition, LED_TRANSITION_INTERPOLATE, LED_RGYW_INTERPOLATION_TIME_MS); 
-        #else 
-        RGBLED_Command_Off(&MainLED, true);
-        #endif     
+#else 
+      RGBLED_Command_Off(&MainLED, true);
+      WHITE_LED_OFF;
+#endif     
       break;
     }
   }
@@ -1810,7 +1853,7 @@ static void PD_SetBatteryLED_Charging(BATTLevel_State_t Level, bool ForceSendCmd
 
 static void PD_ProcessDebuggerCommands(void)
 {
-  #if defined(ENABLE_DEBUG_MODE)
+#if defined(ENABLE_DEBUG_MODE)
   if (DEBUGGER_SHORT_PRESS != 0)
   {
     UICommand |= UI_TOUCH_PWR_SHORT;
@@ -1885,6 +1928,11 @@ static void PD_ProcessDebuggerCommands(void)
 #endif
 }
 
+
+#if USE_NEW_LED_LIBRARY
+
+const char *LED_Animation_PrintName(void *AnimationPtr);
+
 /**
  * @brief  Callback function for LED animation Events.
  */
@@ -1893,24 +1941,17 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
       switch (status)
     {
     case LED_STATUS_ANIMATION_STARTED:
-    DBG_MSG("LED_STATUS_ANIMATION_STARTED\n");
-      // if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
-      // {
-      //   DBG_MSG("LED_Pulse_BatteryCharge_Mid - Animation Started\n");
-      // }
-
+    DBG_MSG("LED_STATUS_ANIMATION_STARTED -> %s\n", LED_Animation_PrintName(AnimationPtr));
         break;
 
     case LED_STATUS_ANIMATION_COMPLETED:
     {
-      DBG_MSG("LED_STATUS_ANIMATION_COMPLETED\n");
+      DBG_MSG("LED_STATUS_ANIMATION_COMPLETED -> %s\n", LED_Animation_PrintName(AnimationPtr));
       // Once the LED animation is completed, turn on the white LED if flag is set
       #if USE_WHITE_LED
       if (TurnOnWhiteLEDOnCompletion)
       {
         TurnOnWhiteLEDOnCompletion = false;
-        //DBG_MSG("Are LEDs Off? %d\n", LED_Transition_IsLEDOff(&LEDTransition));
-        //DBG_MSG("Color is [0x%x] [0x%x] [0x%x]\n", LEDTransition.LedHandle->currentColor[0], LEDTransition.LedHandle->currentColor[1], LEDTransition.LedHandle->currentColor[2]);
         LED_RGYW_WHITE_ON;
       }
       #endif 
@@ -1918,20 +1959,14 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
     break;
 
     case LED_STATUS_ANIMATION_STOPPED:
-    DBG_MSG("LED_STATUS_ANIMATION_STOPPED\n");
+    DBG_MSG("LED_STATUS_ANIMATION_STOPPED -> %s\n", LED_Animation_PrintName(AnimationPtr));
         break;
 
     case LED_STATUS_ANIMATION_TRANSITION_STARTED:
     {
-      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED\n");
-      
-      // if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
-      // {
-      //   DBG_MSG("LED_Pulse_BatteryCharge_Mid - Transition Started\n");
-      // }
-
+      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_STARTED -> %s\n", LED_Animation_PrintName(AnimationPtr));
       #if USE_WHITE_LED
-          // Turn off White LED
+          // Turn off White LED to prevent it from being on during transition
           LED_RGYW_WHITE_OFF;
       #endif 
     }
@@ -1939,16 +1974,78 @@ void LED_Complete_Callback(LED_Animation_Type_t animationType, LED_Status_t stat
 
     case LED_STATUS_ANIMATION_TRANSITION_COMPLETED:
     {
-      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_COMPLETED\n");
+      DBG_MSG("LED_STATUS_ANIMATION_TRANSITION_COMPLETED -> %s\n", LED_Animation_PrintName(AnimationPtr));
     }
       break;
 
     default:
         if (IS_LED_ERROR_STATUS(status))
         {
-          DBG_MSG("LED_STATUS_ANIMATION_ERROR\n");
+          DBG_MSG("LED_STATUS_ANIMATION_ERROR -> %s\n", LED_Animation_PrintName(AnimationPtr));
         }
         break;
     }
 
 }
+
+// Function to print the name of the animation
+const char *LED_Animation_PrintName(void *AnimationPtr)
+{
+    if (AnimationPtr == &LED_Solid_BatteryChargeFinished)
+    {
+        return "LED_Solid_BatteryChargeFinished\n";
+    }
+    else if (AnimationPtr == &LED_Solid_BatteryLow)
+    {
+        return "LED_Solid_BatteryLow\n";
+    }
+    else if (AnimationPtr == &LED_Solid_BatteryMid)
+    {
+        return "LED_Solid_BatteryMid\n";
+    }
+    else if (AnimationPtr == &LED_Solid_BatteryHigh)
+    {
+        return "LED_Solid_BatteryHigh\n";
+    }
+    else if (AnimationPtr == &LED_Solid_DefaultColor)
+    {
+        return "LED_Solid_DefaultColor\n";
+    }
+    else if (AnimationPtr == &LED_Flash_BatteryVeryLow)
+    {
+        return "LED_Flash_BatteryVeryLow\n";
+    }
+    else if (AnimationPtr == &LED_Flash_BatteryEmpty)
+    {
+        return "LED_Flash_BatteryEmpty\n";
+    }
+    else if (AnimationPtr == &LED_Flash_Error)
+    {
+        return "LED_Flash_Error\n";
+    }
+    else if (AnimationPtr == &LED_Pulse_BatteryCharge_LowAndVeryLow)
+    {
+        return "LED_Pulse_BatteryCharge_LowAndVeryLow\n";
+    }
+    else if (AnimationPtr == &LED_Pulse_BatteryCharge_Mid)
+    {
+        return "LED_Pulse_BatteryCharge_Mid\n";
+    }
+    else if (AnimationPtr == &LED_Pulse_BatteryCharge_High)
+    {
+        return "LED_Pulse_BatteryCharge_High\n";
+    }
+    else if (AnimationPtr == NULL)
+    {
+        return "LED_Off\n";
+    }
+    else
+    {
+        return "Unknown Animation\n";
+    }
+}
+
+#endif
+
+
+

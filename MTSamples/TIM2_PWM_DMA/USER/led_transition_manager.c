@@ -1,18 +1,18 @@
 #include "led_transition_manager.h"
 
 #define DEBUG_BUFFER_SIZE 100
-#define LED_TRANSITION_DBG 0
+#define LED_TRANSITION_DBG 1
 
 #if LED_TRANSITION_DBG
-#include "stm32l4xx_hal.h"
+// #include "stm32l4xx_hal.h"
 #include <stdio.h>
-extern UART_HandleTypeDef huart2;
+//extern UART_HandleTypeDef huart2;
 #define LED_TRANSITION_DBG_MSG(fmt, ...)                                                                               \
     do                                                                                                                 \
     {                                                                                                                  \
         static char dbgBuff[DEBUG_BUFFER_SIZE];                                                                        \
         snprintf(dbgBuff, DEBUG_BUFFER_SIZE, (fmt), ##__VA_ARGS__);                                                    \
-        HAL_UART_Transmit(&huart2, (uint8_t*)dbgBuff, strlen(dbgBuff), 1000);                                          \
+        Uart_Put_Buff(dbgBuff, strlen(dbgBuff)); \
     } while (0)
 #else
 #define LED_TRANSITION_DBG_MSG(fmt, ...)                                                                               \
@@ -173,7 +173,7 @@ static void LED_Transition_CallCallbackIfExists(LED_Transition_Handle_t* this, L
 {
     if (this->LedHandle->callback != NULL)
     {
-        this->LedHandle->callback(this->LedHandle->animationType, Status, this->targetAnimData);
+        this->LedHandle->callback(this->LedHandle->animationType, Status, (void *)this->targetAnimData);
     }
 }
 
@@ -236,6 +236,44 @@ static LED_Status_t LED_Transition_StateCompleted(LED_Transition_Handle_t* this)
     return LED_STATUS_SUCCESS;
 }
 
+bool LED_Animation_CheckAndForceColorMatch(LED_Handle_t *ledHandle, uint8_t *targetColor)
+{
+    // Get the number of colors
+    uint8_t colorCount = LED_Animation_GetColorCount(ledHandle->controller->LedType);
+    uint8_t color[colorCount];
+
+    // Get the current color
+    LED_Animation_GetCurrentColor(ledHandle, color, colorCount);
+
+    // Check if the colors match
+    bool colorsMatch = true;
+    for (uint8_t i = 0; i < colorCount; i++)
+    {
+        if (color[i] != targetColor[i])
+        {
+            colorsMatch = false;
+            LED_TRANSITION_DBG_MSG("Color [%d] Current: %d, Target: %d\r\n", i, color[i], targetColor[i]);
+            break;
+        }
+        LED_TRANSITION_DBG_MSG("Color [%d] Current: %d, Target: %d\r\n", i, color[i], targetColor[i]);
+    }
+
+    // Print result and force color if necessary
+    if (colorsMatch)
+    {
+        LED_TRANSITION_DBG_MSG("Transition Completed, Colors Match\r\n");
+    }
+    else
+    {
+        LED_TRANSITION_DBG_MSG("Transition Completed, Colors Do Not Match\r\n");
+        // Force the target color
+        LED_Animation_ExecuteColorSetting(ledHandle, targetColor);
+    }
+
+    return colorsMatch;
+}
+
+
 static LED_Status_t LED_Transition_StateOngoing(LED_Transition_Handle_t* this, uint32_t tick)
 {
     uint32_t elapsed = tick - this->lastTick;
@@ -255,6 +293,14 @@ static LED_Status_t LED_Transition_StateOngoing(LED_Transition_Handle_t* this, u
         if (elapsed >= this->Duration)
         {
             LED_TRANSITION_DBG_MSG("Interpolation Completed\r\n");
+
+            // Interpolation sometimes does not reach the target color exactly
+            if (LED_Animation_CheckAndForceColorMatch(this->LedHandle, this->targetColor)) {
+                LED_TRANSITION_DBG_MSG("Colors successfully transitioned.\r\n");
+            }
+            else {
+                LED_TRANSITION_DBG_MSG("Colors forced to target.\r\n");
+            }
 
             // Transition to idle state
             LED_Transition_SetNextState(this, LED_TRANSITION_STATE_COMPLETED);
@@ -372,6 +418,13 @@ LED_Status_t LED_Transition_Execute(LED_Transition_Handle_t* handle, const void*
         // LED_TRANSITION_DBG_MSG("Target Animation is the same as the current animation, no transition needed\r\n");
         return LED_STATUS_SUCCESS;
     }
+
+    // if target is Off and is already off, do not transition
+    // if (animType == LED_ANIMATION_TYPE_OFF && LED_Transition_IsLEDOff(handle))
+    // {
+    //     // LED_TRANSITION_DBG_MSG("Target Animation is Off and LED is already off, no transition needed\r\n");
+    //     return LED_STATUS_SUCCESS;
+    // }
 
     if (handle->state == LED_TRANSITION_STATE_IDLE)
     {

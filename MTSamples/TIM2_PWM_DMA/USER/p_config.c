@@ -117,18 +117,18 @@ const LED_Animation_Flash_t LED_Flash_BatteryVeryLow = {
     .repeatTimes = -1,
 };
 
-LED_Animation_Flash_t LED_Flash_Error = {
-    .color = &RedColor,
-    .onTimeMs = LED_RGYW_ERROR_FLASH_ON_TIME,
-    .offTimeMs = LED_RGYW_ERROR_FLASH_OFF_TIME,
-    .repeatTimes = LED_RGYW_ERROR_FLASH_TIMES,
-};
-
 const LED_Animation_Flash_t LED_Flash_BatteryEmpty = {
     .color = &RedColor,
     .onTimeMs = BATT_EMPTY_FLASH_INTERVAL,
     .offTimeMs = BATT_EMPTY_FLASH_INTERVAL,
     .repeatTimes = BATT_EMPTY_FLASH_TIMES,
+};
+
+LED_Animation_Flash_t LED_Flash_Error = {
+    .color = &RedColor,
+    .onTimeMs = LED_RGYW_ERROR_FLASH_INTERVAL,
+    .offTimeMs = LED_RGYW_ERROR_FLASH_INTERVAL,
+    .repeatTimes = LED_RGYW_ERROR_FLASH_TIMES,
 };
 
 const LED_Animation_Pulse_t LED_Pulse_BatteryCharge_LowAndVeryLow = {
@@ -210,6 +210,14 @@ RGBLED_Flash_Handle_t LEDFlash_BatteryVeryLow = {
     .Times = -1, /* Negative number = false indefinitely. */
     .OnTicks = LED_RGYW_BATT_VERYLOW_FLASH_ON_TICKS,
     .OffTicks = LED_RGYW_BATT_VERYLOW_FLASH_OFF_TICKS,
+};
+
+RGBLED_Flash_Handle_t BattEmptyFlash = {
+    .Color = &RedColor,
+    .Type = RGBLEDFlashType_ON,
+    .Times = BATT_EMPTY_FLASH_TIMES,
+    .OnTicks = BATT_EMPTY_FLASH_TICKS,
+    .OffTicks = BATT_EMPTY_FLASH_TICKS,
 };
 
 RGBLED_Flash_Handle_t LEDErrorFlash = {

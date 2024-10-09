@@ -51,6 +51,10 @@
 #define LED_RGYW_WHITE_PORT GPIOC
 #define LED_RGYW_WHITE_PIN GPIO_Pin_10
 
+// Power Button 
+#define POWER_BUTTON_PORT GPIOC
+#define POWER_BUTTON_PIN GPIO_Pin_11
+
 // Speed 1 LED 
 #define SPEED1_LED_PORT GPIOD
 #define SPEED1_LED_PIN GPIO_Pin_4
